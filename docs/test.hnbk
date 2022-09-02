@@ -1,0 +1,16 @@
+- kind: 2
+  language: dothttp-vscode
+  value: |-
+    POST 'http://localhost:3000/first/sample1/post'
+    json({
+        "hai": "bye"
+    })
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |-
+    GET 'http://localhost:3000/first/sample1/get'
+    json({
+        "hai": "bye"
+    })
+  outputs: []
