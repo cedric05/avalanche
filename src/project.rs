@@ -8,6 +8,19 @@ use serde_json::json;
 use url::Url;
 
 use crate::config::{Action, Header, ProxyParams, ServiceConfig, UrlParam};
+
+lazy_static::lazy_static! {
+    static ref HOP_HEADERS: Vec<HeaderName> = vec![
+        HeaderName::from_str("Connection").unwrap(),
+        HeaderName::from_str("Keep-Alive").unwrap(),
+        HeaderName::from_str("Proxy-Authenticate").unwrap(),
+        HeaderName::from_str("Proxy-Authorization").unwrap(),
+        HeaderName::from_str("Te").unwrap(),
+        HeaderName::from_str("Trailers").unwrap(),
+        HeaderName::from_str("Transfer-Encoding").unwrap(),
+        HeaderName::from_str("Upgrade").unwrap(),
+    ];
+}
 /// project
 /// project has two main variables
 /// 1. project identifier
@@ -65,6 +78,9 @@ impl ServiceConfig {
                 let key = HeaderName::from_str(&header.key).unwrap();
                 headers_mut.append(key, HeaderValue::from_str(&header.value).unwrap());
             }
+        }
+        for header in HOP_HEADERS.iter() {
+            headers_mut.remove(header);
         }
     }
 }
@@ -170,7 +186,7 @@ pub fn simple_project_handler() -> SimpleProjectHandler {
                 value: "test".to_string(),
                 action: Action::Add,
             }],
-            url: "http://httpbin.org/".to_string(),
+            url: "http://httpbin.org/get".to_string(),
             handler: ProxyParams {
                 params: json! ({
                     "username":"prasanth",
