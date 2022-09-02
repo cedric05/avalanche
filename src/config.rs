@@ -9,14 +9,14 @@ pub enum Action {
 pub struct Header {
     key: String,
     value: String,
-    action: Action,
+    pub action: Action,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct UrlParam {
-    key: String,
-    value: String,
-    action: Action,
+    pub key: String,
+    pub value: String,
+    pub action: Action,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Copy, Hash)]

@@ -1,12 +1,13 @@
-use std::{collections::HashMap, vec};
+use std::{collections::HashMap, str::FromStr, vec};
 
 use async_trait::async_trait;
 use dyn_clone::{clone_trait_object, DynClone};
-use http::{HeaderValue, Response, Uri};
-use hyper::{client::HttpConnector, Body};
+use http::{HeaderValue, Request, Response, Uri};
+use hyper::{client::HttpConnector, service, Body};
 use serde_json::json;
+use url::Url;
 
-use crate::config::{ProxyParams, ServiceConfig};
+use crate::config::{Action, ProxyParams, ServiceConfig, UrlParam};
 /// project
 /// project has two main variables
 /// 1. project identifier
@@ -46,6 +47,21 @@ struct BasicAuth {
     client: hyper::Client<HttpConnector>,
 }
 
+impl ServiceConfig {
+    fn get_updated_request(&self, rest: &str, req: &mut Request<Body>) {
+        let uri = Url::from_str(&self.url.clone()).unwrap();
+        let uri = uri.join(rest).unwrap();
+        let params: Vec<(String, String)> = self
+            .query_params
+            .iter()
+            .filter(|x| x.action == Action::Add)
+            .map(|x| (x.key.clone(), x.value.clone()))
+            .collect();
+        let uri: Url = Url::parse_with_params(&uri.to_string(), &params).unwrap();
+        *req.uri_mut() = Uri::from_str(&uri.to_string()).unwrap();
+    }
+}
+
 #[async_trait]
 impl ProxyService for BasicAuth {
     async fn handle_service(
@@ -55,13 +71,7 @@ impl ProxyService for BasicAuth {
         request: hyper::Request<Body>,
     ) -> Response<Body> {
         let mut request = request;
-        let uri = Uri::builder()
-            .scheme("http")
-            .authority(service_config.url.clone())
-            .path_and_query(format!("/{}", url))
-            .build()
-            .unwrap();
-        *request.uri_mut() = uri;
+        service_config.get_updated_request(url, &mut request);
         let headers_mut = request.headers_mut();
         let username = service_config
             .handler
@@ -143,9 +153,13 @@ pub fn simple_project_handler() -> SimpleProjectHandler {
     let haha = (
         ServiceConfig {
             method: crate::config::Method::ANY,
-            query_params: vec![],
+            query_params: vec![UrlParam {
+                key: "test".to_string(),
+                value: "test".to_string(),
+                action: Action::Add,
+            }],
             headers: vec![],
-            url: "httpbin.org".to_string(),
+            url: "http://httpbin.org/".to_string(),
             handler: ProxyParams {
                 params: json! ({
                     "username":"prasanth",
