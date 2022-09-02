@@ -7,8 +7,8 @@ pub enum Action {
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Header {
-    key: String,
-    value: String,
+    pub key: String,
+    pub value: String,
     pub action: Action,
 }
 

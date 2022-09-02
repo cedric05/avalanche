@@ -3,8 +3,8 @@
 - [ ] single path or multiple path (prefer multipath)
 
 # TODO Request
-- [ ] Url query params forwarding with custom params
-- [ ] Headers with mut with forwarding
+- [x] Url query params forwarding with custom params
+- [x] Headers with mut with forwarding
 - [ ] Remove hop headers
 - [ ] Add logging for each request with invoked user into file (configurable)
 - [ ] provide stats on which api is called and how many times (promotheues)

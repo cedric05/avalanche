@@ -2,12 +2,12 @@ use std::{collections::HashMap, str::FromStr, vec};
 
 use async_trait::async_trait;
 use dyn_clone::{clone_trait_object, DynClone};
-use http::{HeaderValue, Request, Response, Uri};
-use hyper::{client::HttpConnector, service, Body};
+use http::{header::HeaderName, HeaderValue, Request, Response, Uri};
+use hyper::{client::HttpConnector, Body};
 use serde_json::json;
 use url::Url;
 
-use crate::config::{Action, ProxyParams, ServiceConfig, UrlParam};
+use crate::config::{Action, Header, ProxyParams, ServiceConfig, UrlParam};
 /// project
 /// project has two main variables
 /// 1. project identifier
@@ -59,6 +59,13 @@ impl ServiceConfig {
             .collect();
         let uri: Url = Url::parse_with_params(&uri.to_string(), &params).unwrap();
         *req.uri_mut() = Uri::from_str(&uri.to_string()).unwrap();
+        let headers_mut = req.headers_mut();
+        for header in &self.headers {
+            if header.action == Action::Add {
+                let key = HeaderName::from_str(&header.key).unwrap();
+                headers_mut.append(key, HeaderValue::from_str(&header.value).unwrap());
+            }
+        }
     }
 }
 
@@ -158,7 +165,11 @@ pub fn simple_project_handler() -> SimpleProjectHandler {
                 value: "test".to_string(),
                 action: Action::Add,
             }],
-            headers: vec![],
+            headers: vec![Header {
+                key: "test".to_string(),
+                value: "test".to_string(),
+                action: Action::Add,
+            }],
             url: "http://httpbin.org/".to_string(),
             handler: ProxyParams {
                 params: json! ({
