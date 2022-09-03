@@ -61,6 +61,11 @@ struct BasicAuth {
     client: hyper::Client<HttpsConnector<HttpConnector>>,
 }
 
+#[derive(Clone)]
+struct HeaderAuth {
+    client: hyper::Client<HttpsConnector<HttpConnector>>,
+}
+
 impl ServiceConfig {
     fn get_updated_request(&self, rest: &str, req: &mut Request<Body>) {
         let uri = Url::from_str(&self.url.clone()).unwrap();
@@ -83,6 +88,40 @@ impl ServiceConfig {
         for header in HOP_HEADERS.iter() {
             headers_mut.remove(header);
         }
+    }
+}
+
+#[async_trait]
+impl ProxyService for HeaderAuth {
+    async fn handle_service(
+        &self,
+        url: &str,
+        service_config: &ServiceConfig,
+        request: hyper::Request<Body>,
+    ) -> Response<Body> {
+        let mut request = request;
+        service_config.get_updated_request(url, &mut request);
+        let headers_mut = request.headers_mut();
+        let headername = service_config
+            .handler
+            .params
+            .get("name")
+            .unwrap()
+            .as_str()
+            .map(|x| HeaderName::from_str(x).unwrap())
+            .unwrap();
+        let headervalue = service_config
+            .handler
+            .params
+            .get("value")
+            .unwrap()
+            .as_str()
+            .unwrap();
+        headers_mut.append(headername, HeaderValue::from_str(headervalue).unwrap());
+        headers_mut.remove("host");
+        println!("request is {:?}", request);
+        let response = self.client.request(request).await.unwrap();
+        response
     }
 }
 
@@ -174,7 +213,7 @@ pub fn simple_project_handler() -> SimpleProjectHandler {
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
     let basic_auth: Box<dyn ProxyService> = Box::new(BasicAuth { client: client });
-    let haha = (
+    let basic_auth_config = (
         ServiceConfig {
             method: crate::config::Method::ANY,
             query_params: vec![UrlParam {
@@ -190,18 +229,49 @@ pub fn simple_project_handler() -> SimpleProjectHandler {
             url: "http://httpbin.org/get".to_string(),
             handler: ProxyParams {
                 params: json! ({
-                    "username":"prasanth",
-                    "password": "password"
+                    "key":"rama",
+                    "value": "ranga"
                 }),
                 handler_type: "basic_auth".to_string(),
             },
         },
         basic_auth,
     );
+
+    let https = HttpsConnector::new();
+    let client = Client::builder().build::<_, hyper::Body>(https);
+    let header_auth: Box<dyn ProxyService> = Box::new(BasicAuth { client: client });
+    let header_auth_config = (
+        ServiceConfig {
+            method: crate::config::Method::ANY,
+            query_params: vec![UrlParam {
+                key: "test".to_string(),
+                value: "test".to_string(),
+                action: Action::Add,
+            }],
+            headers: vec![Header {
+                key: "test".to_string(),
+                value: "test".to_string(),
+                action: Action::Add,
+            }],
+            url: "http://httpbin.org/".to_string(),
+            handler: ProxyParams {
+                params: json! ({
+                    "username":"prasanth",
+                    "password": "password"
+                }),
+                handler_type: "header_auth".to_string(),
+            },
+        },
+        header_auth,
+    );
     SimpleProjectHandler {
         projects: vec![Box::new(SimpleProject {
             name: "first",
-            services: HashMap::from_iter([("sample1", haha)]),
+            services: HashMap::from_iter([
+                ("sample1", basic_auth_config),
+                ("second", header_auth_config),
+            ]),
         })],
     }
 }

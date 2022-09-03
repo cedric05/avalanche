@@ -10,8 +10,8 @@
 - [ ] provide stats on which api is called and how many times (promotheues)
 
 # TODO Request  AUTH
-- [ ] Basic Auth
-- [ ] Header Auth
+- [x] Basic Auth
+- [x] Header Auth
 - [ ] Aws auth
 - [ ] digest auth???
 - [ ] save header information safely
