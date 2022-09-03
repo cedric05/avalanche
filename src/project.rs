@@ -3,7 +3,8 @@ use std::{collections::HashMap, str::FromStr, vec};
 use async_trait::async_trait;
 use dyn_clone::{clone_trait_object, DynClone};
 use http::{header::HeaderName, HeaderValue, Request, Response, Uri};
-use hyper::{client::HttpConnector, Body};
+use hyper::{client::HttpConnector, Body, Client};
+use hyper_tls::HttpsConnector;
 use serde_json::json;
 use url::Url;
 
@@ -57,7 +58,7 @@ clone_trait_object!(ProxyService);
 
 #[derive(Clone)]
 struct BasicAuth {
-    client: hyper::Client<HttpConnector>,
+    client: hyper::Client<HttpsConnector<HttpConnector>>,
 }
 
 impl ServiceConfig {
@@ -152,7 +153,7 @@ impl ProjectHandler for SimpleProjectHandler {
         let _host = url_split.next().unwrap();
         let project = url_split.next().unwrap();
         let service = url_split.next().unwrap();
-        let rest = url_split.next().unwrap();
+        let rest = url_split.next().unwrap_or("");
         println!("project is {} and service is {}", project, service);
         for a_project in &self.projects {
             if a_project.is_project(project).await {
@@ -170,9 +171,9 @@ impl ProjectHandler for SimpleProjectHandler {
 }
 
 pub fn simple_project_handler() -> SimpleProjectHandler {
-    let basic_auth: Box<dyn ProxyService> = Box::new(BasicAuth {
-        client: hyper::Client::new(),
-    });
+    let https = HttpsConnector::new();
+    let client = Client::builder().build::<_, hyper::Body>(https);
+    let basic_auth: Box<dyn ProxyService> = Box::new(BasicAuth { client: client });
     let haha = (
         ServiceConfig {
             method: crate::config::Method::ANY,
