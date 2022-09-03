@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr, vec};
+use std::{collections::HashMap, error::Error, str::FromStr, vec};
 
 use async_trait::async_trait;
 use dyn_clone::{clone_trait_object, DynClone};
@@ -41,7 +41,10 @@ clone_trait_object!(Project);
 
 #[async_trait]
 pub trait ProjectHandler {
-    async fn handle_request(&self, request: hyper::Request<Body>) -> Response<Body>;
+    async fn handle_request(
+        &self,
+        request: hyper::Request<Body>,
+    ) -> Result<Response<Body>, Box<dyn Error>>;
 }
 
 #[async_trait]
@@ -51,7 +54,7 @@ trait ProxyService: Sync + Send + DynClone {
         url: &str,
         service_config: &ServiceConfig,
         request: hyper::Request<Body>,
-    ) -> Response<Body>;
+    ) -> Result<Response<Body>, Box<dyn Error>>;
 }
 
 clone_trait_object!(ProxyService);
@@ -67,27 +70,32 @@ struct HeaderAuth {
 }
 
 impl ServiceConfig {
-    fn get_updated_request(&self, rest: &str, req: &mut Request<Body>) {
-        let uri = Url::from_str(&self.url.clone()).unwrap();
-        let uri = uri.join(rest).unwrap();
+    fn get_updated_request(
+        &self,
+        rest: &str,
+        req: &mut Request<Body>,
+    ) -> Result<(), Box<dyn Error>> {
+        let uri = Url::from_str(&self.url.clone())?;
+        let uri = uri.join(rest)?;
         let params: Vec<(String, String)> = self
             .query_params
             .iter()
             .filter(|x| x.action == Action::Add)
             .map(|x| (x.key.clone(), x.value.clone()))
             .collect();
-        let uri: Url = Url::parse_with_params(&uri.to_string(), &params).unwrap();
-        *req.uri_mut() = Uri::from_str(&uri.to_string()).unwrap();
+        let uri: Url = Url::parse_with_params(&uri.to_string(), &params)?;
+        *req.uri_mut() = Uri::from_str(&uri.to_string())?;
         let headers_mut = req.headers_mut();
         for header in &self.headers {
             if header.action == Action::Add {
-                let key = HeaderName::from_str(&header.key).unwrap();
-                headers_mut.append(key, HeaderValue::from_str(&header.value).unwrap());
+                let key = HeaderName::from_str(&header.key)?;
+                headers_mut.append(key, HeaderValue::from_str(&header.value)?);
             }
         }
         for header in HOP_HEADERS.iter() {
             headers_mut.remove(header);
         }
+        Ok(())
     }
 }
 
@@ -98,9 +106,9 @@ impl ProxyService for HeaderAuth {
         url: &str,
         service_config: &ServiceConfig,
         request: hyper::Request<Body>,
-    ) -> Response<Body> {
+    ) -> Result<Response<Body>, Box<dyn Error>> {
         let mut request = request;
-        service_config.get_updated_request(url, &mut request);
+        service_config.get_updated_request(url, &mut request)?;
         let headers_mut = request.headers_mut();
         let headername = service_config
             .handler
@@ -121,7 +129,7 @@ impl ProxyService for HeaderAuth {
         headers_mut.remove("host");
         println!("request is {:?}", request);
         let response = self.client.request(request).await.unwrap();
-        response
+        Ok(response)
     }
 }
 
@@ -132,9 +140,9 @@ impl ProxyService for BasicAuth {
         url: &str,
         service_config: &ServiceConfig,
         request: hyper::Request<Body>,
-    ) -> Response<Body> {
+    ) -> Result<Response<Body>, Box<dyn Error>> {
         let mut request = request;
-        service_config.get_updated_request(url, &mut request);
+        service_config.get_updated_request(url, &mut request)?;
         let headers_mut = request.headers_mut();
         let username = service_config
             .handler
@@ -157,7 +165,7 @@ impl ProxyService for BasicAuth {
         headers_mut.remove("host");
         println!("request is {:?}", request);
         let response = self.client.request(request).await.unwrap();
-        response
+        Ok(response)
     }
 }
 
@@ -185,7 +193,10 @@ pub struct SimpleProjectHandler {
 
 #[async_trait]
 impl ProjectHandler for SimpleProjectHandler {
-    async fn handle_request(&self, request: hyper::Request<Body>) -> Response<Body> {
+    async fn handle_request(
+        &self,
+        request: hyper::Request<Body>,
+    ) -> Result<Response<Body>, Box<dyn Error>> {
         let uri = request.uri().clone();
         let uri = uri.path_and_query().unwrap().as_str();
         let mut url_split = uri.splitn(4, "/");
@@ -205,7 +216,7 @@ impl ProjectHandler for SimpleProjectHandler {
                 }
             }
         }
-        Response::builder().status(404).body(Body::empty()).unwrap()
+        Ok(Response::builder().status(404).body(Body::empty()).unwrap())
     }
 }
 

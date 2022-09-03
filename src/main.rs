@@ -12,8 +12,8 @@ async fn main_service(
     request: Request<Body>,
     project_handler: Arc<SimpleProjectHandler>,
 ) -> Result<Response<Body>, Infallible> {
-    let response = project_handler.handle_request(request).await;
-    Ok(response)
+    let result = project_handler.handle_request(request).await.unwrap();
+    Ok(result)
 }
 
 #[tokio::main]
