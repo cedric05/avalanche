@@ -12,7 +12,7 @@
 # TODO Request  AUTH
 - [x] Basic Auth
 - [x] Header Auth
-- [ ] Aws auth (https://docs.rs/aws-smithy-client/0.48.0/aws_smithy_client/#modules https://github.com/awslabs/aws-sdk-rust/tree/main/sdk/aws-smithy-client)
+- [ ] Aws auth (https://github.dev/awslabs/smithy-rs/blob/main/aws/rust-runtime/aws-hyper/src/lib.rs)
 - [ ] digest auth???
 - [ ] save header information safely
 
