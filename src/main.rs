@@ -7,6 +7,7 @@ use project::{simple_project_handler, ProjectHandler, SimpleProjectHandler};
 
 mod config;
 mod project;
+mod basicauth;
 
 async fn main_service(
     request: Request<Body>,

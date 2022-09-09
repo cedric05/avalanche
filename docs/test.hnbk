@@ -7,34 +7,10 @@
         "hai3": "bye3"
     })
   outputs:
-    - mime: x-application/dotbook
-      value: "{\n\t\"response\": {\n\t\t\"headers\": {},\n\t\t\"body\": \"\",\n\t\t\"status\": 200,\n\t\t\"method\": \"POST\",\n\t\t\"output_file\": \"\",\n\t\t\"url\": \"http://localhost:3000/first/sample1/post?hai=bye\",\n\t\t\"response\": {\n\t\t\t\"headers\": {\n\t\t\t\t\"date\": \"Sat, 03 Sep 2022 11:46:28 GMT\",\n\t\t\t\t\"content-type\": \"application/json\",\n\t\t\t\t\"content-length\": \"584\",\n\t\t\t\t\"connection\": \"keep-alive\",\n\t\t\t\t\"server\": \"gunicorn/19.9.0\",\n\t\t\t\t\"access-control-allow-origin\": \"*\",\n\t\t\t\t\"access-control-allow-credentials\": \"true\"\n\t\t\t},\n\t\t\t\"body\": \"{\\n  \\\"args\\\": {\\n    \\\"hai\\\": \\\"bye\\\", \\n    \\\"test\\\": \\\"test\\\"\\n  }, \\n  \\\"data\\\": \\\"{\\\\\\\"hai3\\\\\\\": \\\\\\\"bye3\\\\\\\"}\\\", \\n  \\\"files\\\": {}, \\n  \\\"form\\\": {}, \\n  \\\"headers\\\": {\\n    \\\"Accept-Encoding\\\": \\\"identity\\\", \\n    \\\"Authentication\\\": \\\"cHJhc2FudGg6cGFzc3dvcmQ=\\\", \\n    \\\"Content-Length\\\": \\\"16\\\", \\n    \\\"Content-Type\\\": \\\"application/json\\\", \\n    \\\"Host\\\": \\\"httpbin.org\\\", \\n    \\\"Test\\\": \\\"test\\\", \\n    \\\"User-Agent\\\": \\\"python-urllib3/1.26.11\\\", \\n    \\\"X-Amzn-Trace-Id\\\": \\\"Root=1-63133e94-317e927d2921c77236080bf5\\\"\\n  }, \\n  \\\"json\\\": {\\n    \\\"hai3\\\": \\\"bye3\\\"\\n  }, \\n  \\\"origin\\\": \\\"144.48.225.42\\\", \\n  \\\"url\\\": \\\"http://httpbin.org/post?hai=bye&test=test\\\"\\n}\\n\",\n\t\t\t\"status\": 200,\n\t\t\t\"method\": \"POST\",\n\t\t\t\"output_file\": \"\",\n\t\t\t\"url\": \"http://localhost:3000/first/sample1/post?hai=bye\",\n\t\t\t\"contentType\": \"application/json\"\n\t\t},\n\t\t\"script_result\": {\n\t\t\t\"stdout\": \"\",\n\t\t\t\"error\": \"\",\n\t\t\t\"properties\": {},\n\t\t\t\"tests\": [],\n\t\t\t\"compiled\": true\n\t\t},\n\t\t\"http\": \"@name(\\\"1\\\")\\nPOST \\\"http://localhost:3000/first/sample1/post\\\"\\n? \\\"hai\\\"= \\\"bye\\\"\\njson({\\n    \\\"hai3\\\": \\\"bye3\\\"\\n})\\n\\n\\n\",\n\t\t\"filenameExtension\": \"json\"\n\t},\n\t\"metadata\": {\n\t\t\"uri\": {\n\t\t\t\"$mid\": 1,\n\t\t\t\"fsPath\": \"/home/neptune/projects/personal/cedric05/mars-rover/docs/test.hnbk\",\n\t\t\t\"external\": \"vscode-notebook-cell://wsl%2Bubuntu/home/neptune/projects/personal/cedric05/mars-rover/docs/test.hnbk#W0sdnNjb2RlLXJlbW90ZQ%3D%3D\",\n\t\t\t\"path\": \"/home/neptune/projects/personal/cedric05/mars-rover/docs/test.hnbk\",\n\t\t\t\"scheme\": \"vscode-notebook-cell\",\n\t\t\t\"authority\": \"wsl+ubuntu\",\n\t\t\t\"fragment\": \"W0sdnNjb2RlLXJlbW90ZQ==\"\n\t\t},\n\t\t\"cellNo\": 0,\n\t\t\"date\": \"2022-16-03--17-09-27\",\n\t\t\"target\": \"1\",\n\t\t\"executionTime\": \"0.3\"\n\t}\n}"
-    - mime: text/x-json
-      value: |
-        {
-          "args": {
-            "hai": "bye", 
-            "test": "test"
-          }, 
-          "data": "{\"hai3\": \"bye3\"}", 
-          "files": {}, 
-          "form": {}, 
-          "headers": {
-            "Accept-Encoding": "identity", 
-            "Authentication": "cHJhc2FudGg6cGFzc3dvcmQ=", 
-            "Content-Length": "16", 
-            "Content-Type": "application/json", 
-            "Host": "httpbin.org", 
-            "Test": "test", 
-            "User-Agent": "python-urllib3/1.26.11", 
-            "X-Amzn-Trace-Id": "Root=1-63133e94-317e927d2921c77236080bf5"
-          }, 
-          "json": {
-            "hai3": "bye3"
-          }, 
-          "origin": "144.48.225.42", 
-          "url": "http://httpbin.org/post?hai=bye&test=test"
-        }
+    - mime: application/vnd.code.notebook.stderr
+      value: >-
+        ('Connection aborted.', RemoteDisconnected('Remote end closed connection
+        without response'))
 - kind: 2
   language: dothttp-vscode
   value: |-
@@ -58,4 +34,24 @@
     json({
         "hai": "bye"
     })
-  outputs: []
+  outputs:
+    - mime: x-application/dotbook
+      value: "{\n\t\"response\": {\n\t\t\"headers\": {},\n\t\t\"body\": \"\",\n\t\t\"status\": 200,\n\t\t\"method\": \"GET\",\n\t\t\"output_file\": \"\",\n\t\t\"url\": \"http://localhost:3000/first/second/get\",\n\t\t\"response\": {\n\t\t\t\"headers\": {\n\t\t\t\t\"date\": \"Fri, 09 Sep 2022 01:40:38 GMT\",\n\t\t\t\t\"content-type\": \"application/json\",\n\t\t\t\t\"content-length\": \"398\",\n\t\t\t\t\"connection\": \"keep-alive\",\n\t\t\t\t\"server\": \"gunicorn/19.9.0\",\n\t\t\t\t\"access-control-allow-origin\": \"*\",\n\t\t\t\t\"access-control-allow-credentials\": \"true\"\n\t\t\t},\n\t\t\t\"body\": \"{\\n  \\\"args\\\": {\\n    \\\"test\\\": \\\"test\\\"\\n  }, \\n  \\\"headers\\\": {\\n    \\\"Accept-Encoding\\\": \\\"identity\\\", \\n    \\\"Content-Length\\\": \\\"14\\\", \\n    \\\"Content-Type\\\": \\\"application/json\\\", \\n    \\\"Host\\\": \\\"localhost\\\", \\n    \\\"Test\\\": \\\"test\\\", \\n    \\\"User-Agent\\\": \\\"python-urllib3/1.26.11\\\", \\n    \\\"X-Amzn-Trace-Id\\\": \\\"Root=1-631a9996-5f06f9850e65f80a248e1391\\\"\\n  }, \\n  \\\"origin\\\": \\\"144.48.225.42\\\", \\n  \\\"url\\\": \\\"http://localhost/get?test=test\\\"\\n}\\n\",\n\t\t\t\"status\": 200,\n\t\t\t\"method\": \"GET\",\n\t\t\t\"output_file\": \"\",\n\t\t\t\"url\": \"http://localhost:3000/first/second/get\",\n\t\t\t\"contentType\": \"application/json\"\n\t\t},\n\t\t\"script_result\": {\n\t\t\t\"stdout\": \"\",\n\t\t\t\"error\": \"\",\n\t\t\t\"properties\": {},\n\t\t\t\"tests\": [],\n\t\t\t\"compiled\": true\n\t\t},\n\t\t\"http\": \"@name(\\\"1\\\")\\nGET \\\"http://localhost:3000/first/second/get\\\"\\njson({\\n    \\\"hai\\\": \\\"bye\\\"\\n})\\n\\n\\n\",\n\t\t\"filenameExtension\": \"json\"\n\t},\n\t\"metadata\": {\n\t\t\"uri\": {\n\t\t\t\"$mid\": 1,\n\t\t\t\"fsPath\": \"/home/neptune/projects/personal/cedric05/mars-rover/docs/test.hnbk\",\n\t\t\t\"external\": \"vscode-notebook-cell://wsl%2Bubuntu/home/neptune/projects/personal/cedric05/mars-rover/docs/test.hnbk#W3sdnNjb2RlLXJlbW90ZQ%3D%3D\",\n\t\t\t\"path\": \"/home/neptune/projects/personal/cedric05/mars-rover/docs/test.hnbk\",\n\t\t\t\"scheme\": \"vscode-notebook-cell\",\n\t\t\t\"authority\": \"wsl+ubuntu\",\n\t\t\t\"fragment\": \"W3sdnNjb2RlLXJlbW90ZQ==\"\n\t\t},\n\t\t\"cellNo\": 3,\n\t\t\"date\": \"2022-10-09--07-09-38\",\n\t\t\"target\": \"1\",\n\t\t\"executionTime\": \"0.7\"\n\t}\n}"
+    - mime: text/x-json
+      value: |
+        {
+          "args": {
+            "test": "test"
+          }, 
+          "headers": {
+            "Accept-Encoding": "identity", 
+            "Content-Length": "14", 
+            "Content-Type": "application/json", 
+            "Host": "localhost", 
+            "Test": "test", 
+            "User-Agent": "python-urllib3/1.26.11", 
+            "X-Amzn-Trace-Id": "Root=1-631a9996-5f06f9850e65f80a248e1391"
+          }, 
+          "origin": "144.48.225.42", 
+          "url": "http://localhost/get?test=test"
+        }
