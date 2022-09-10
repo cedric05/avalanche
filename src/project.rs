@@ -1,14 +1,15 @@
 use std::{
-    collections::HashMap, convert::TryFrom, error::Error, fmt::Display, future::Future, pin::Pin,
-    str::FromStr, task::Poll, vec,
+    collections::HashMap, error::Error, fmt::Display, future::Future, pin::Pin, str::FromStr, vec,
 };
 
+use crate::basicauth::{BasicAuth, BasicAuthLayer};
 use async_trait::async_trait;
 use dyn_clone::{clone_trait_object, DynClone};
 use http::{header::HeaderName, HeaderValue, Request, Response, Uri};
 use hyper::{client::HttpConnector, service::Service, Body, Client};
 use hyper_tls::HttpsConnector;
 use serde_json::json;
+use tower::ServiceBuilder;
 use url::Url;
 
 use crate::config::{Action, Header, ProxyParams, ServiceConfig, UrlParam};
@@ -55,7 +56,10 @@ impl std::error::Error for MarsError {}
 trait Project: Sync + Send + DynClone {
     async fn is_project(&self, path: &str) -> bool;
 
-    async fn is_service(&self, path: &str) -> Option<&(ServiceConfig, Box<dyn ProxyService>)>;
+    async fn get_service(
+        &mut self,
+        path: &str,
+    ) -> Option<&mut (ServiceConfig, Box<dyn ProxyService>)>;
 }
 
 clone_trait_object!(Project);
@@ -63,7 +67,7 @@ clone_trait_object!(Project);
 #[async_trait]
 pub trait ProjectHandler {
     async fn handle_request(
-        &self,
+        &mut self,
         request: hyper::Request<Body>,
     ) -> Result<Response<Body>, Box<dyn Error>>;
 }
@@ -77,11 +81,11 @@ trait ProxyService:
         Request<Body>,
         Response = Response<Body>,
         Error = hyper::Error,
-        Future = Pin<Box<dyn Future<Output = Result<Response<Body>, hyper::Error>>>>,
+        Future = Pin<Box<dyn Future<Output = Result<Response<Body>, hyper::Error>> + Send>>,
     >
 {
     async fn handle_service(
-        &self,
+        &mut self,
         url: &str,
         service_config: &ServiceConfig,
         request: hyper::Request<Body>,
@@ -90,156 +94,18 @@ trait ProxyService:
 
 clone_trait_object!(ProxyService);
 
-#[derive(Clone)]
-struct BasicAuth2 {
-    username: String,
-    password: String,
-    client: hyper::Client<HttpsConnector<HttpConnector>>,
-}
-
-impl Service<Request<Body>> for BasicAuth2 {
-    type Response = Response<Body>;
-
-    type Error = hyper::Error;
-
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
-
-    fn poll_ready(
-        &mut self,
-        _cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Result<(), Self::Error>> {
-        Poll::Ready(Ok(()))
-    }
-
-    fn call(&mut self, req: Request<Body>) -> Self::Future {
-        let mut req = req;
-        req.headers_mut().append(
-            "Authentication",
-            HeaderValue::from_str(&base64::encode(format!(
-                "{}:{}",
-                self.username, self.password
-            )))
-            .unwrap(),
-        );
-        let fut = self.client.call(req);
-        Box::pin(async move { fut.await })
-    }
-}
-
-#[derive(Clone)]
-struct HeaderAuth2 {
-    key: String,
-    value: String,
-    client: hyper::Client<HttpsConnector<HttpConnector>>,
-}
-
 #[async_trait]
-impl ProxyService for HeaderAuth2 {
+impl ProxyService for BasicAuth<hyper::Client<HttpsConnector<HttpConnector>>> {
     async fn handle_service(
-        &self,
+        &mut self,
         url: &str,
         service_config: &ServiceConfig,
         request: hyper::Request<Body>,
     ) -> Result<Response<Body>, Box<dyn Error>> {
         let mut request = request;
         service_config.get_updated_request(url, &mut request)?;
-        let response = self.client.request(request).await?;
+        let response = self.call(request).await?;
         Ok(response)
-    }
-}
-#[async_trait]
-
-impl ProxyService for BasicAuth2 {
-    async fn handle_service(
-        &self,
-        url: &str,
-        service_config: &ServiceConfig,
-        request: hyper::Request<Body>,
-    ) -> Result<Response<Body>, Box<dyn Error>> {
-        let mut request = request;
-        service_config.get_updated_request(url, &mut request)?;
-        let response = self.client.request(request).await?;
-        Ok(response)
-    }
-}
-impl Service<Request<Body>> for HeaderAuth2 {
-    type Response = Response<Body>;
-
-    type Error = hyper::Error;
-
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
-
-    fn poll_ready(
-        &mut self,
-        _cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Result<(), Self::Error>> {
-        Poll::Ready(Ok(()))
-    }
-
-    fn call(&mut self, req: Request<Body>) -> Self::Future {
-        let mut req = req;
-        req.headers_mut().append(
-            HeaderName::from_str(&self.key).unwrap(),
-            HeaderValue::from_str(&self.value).unwrap(),
-        );
-        let fut = self.client.call(req);
-        Box::pin(async move { fut.await })
-    }
-}
-
-impl TryFrom<&ServiceConfig> for HeaderAuth2 {
-    type Error = MarsError;
-
-    fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let headername = value
-            .handler
-            .params
-            .get("key")
-            .ok_or(MarsError::ServiceConfigError)?
-            .as_str()
-            .ok_or(MarsError::ServiceConfigError)?;
-        let headervalue = value
-            .handler
-            .params
-            .get("value")
-            .ok_or(MarsError::ServiceConfigError)?
-            .as_str()
-            .ok_or(MarsError::ServiceConfigError)?;
-        let https = HttpsConnector::new();
-        let client = Client::builder().build::<_, hyper::Body>(https);
-        Ok(HeaderAuth2 {
-            key: headername.to_string(),
-            value: headervalue.to_string(),
-            client: client,
-        })
-    }
-}
-
-impl TryFrom<&ServiceConfig> for BasicAuth2 {
-    type Error = MarsError;
-
-    fn try_from(service_config: &ServiceConfig) -> Result<Self, Self::Error> {
-        let username = service_config
-            .handler
-            .params
-            .get("username")
-            .ok_or(MarsError::ServiceConfigError)?
-            .as_str()
-            .ok_or(MarsError::ServiceConfigError)?;
-        let password = service_config
-            .handler
-            .params
-            .get("password")
-            .ok_or(MarsError::ServiceConfigError)?
-            .as_str()
-            .ok_or(MarsError::ServiceConfigError)?;
-        let https = HttpsConnector::new();
-        let client = Client::builder().build::<_, hyper::Body>(https);
-        Ok(BasicAuth2 {
-            username: username.to_string(),
-            password: password.to_string(),
-            client: client,
-        })
     }
 }
 
@@ -285,8 +151,11 @@ impl<'a> Project for SimpleProject<'a> {
         return self.name == path;
     }
 
-    async fn is_service(&self, path: &str) -> Option<&(ServiceConfig, Box<dyn ProxyService>)> {
-        self.services.get(path)
+    async fn get_service(
+        &mut self,
+        path: &str,
+    ) -> Option<&mut (ServiceConfig, Box<dyn ProxyService>)> {
+        self.services.get_mut(path)
     }
 }
 
@@ -295,10 +164,12 @@ pub struct SimpleProjectHandler {
     projects: Vec<Box<dyn Project>>,
 }
 
+// unsafe impl Send for SimpleProjectHandler {}
+
 #[async_trait]
 impl ProjectHandler for SimpleProjectHandler {
     async fn handle_request(
-        &self,
+        &mut self,
         request: hyper::Request<Body>,
     ) -> Result<Response<Body>, Box<dyn Error>> {
         let uri = request.uri().clone();
@@ -309,10 +180,10 @@ impl ProjectHandler for SimpleProjectHandler {
         let service = url_split.next().ok_or(MarsError::UrlError)?;
         let rest = url_split.next().unwrap_or("");
         println!("project is {} and service is {}", project, service);
-        for a_project in &self.projects {
+        for a_project in &mut self.projects {
             if a_project.is_project(project).await {
-                let service_config = a_project.is_service(service).await;
-                match &service_config {
+                let service_config = a_project.get_service(service).await;
+                match service_config {
                     Some((config, service)) => {
                         return service.handle_service(rest, config, request).await;
                     }
@@ -346,38 +217,44 @@ pub fn simple_project_handler() -> SimpleProjectHandler {
             handler_type: "basic_auth".to_string(),
         },
     };
-    let basic_auth2 = Box::new(BasicAuth2::try_from(&service_config).unwrap());
-    let basic_auth_config: (ServiceConfig, Box<dyn ProxyService>) = (service_config, basic_auth2);
-    let header_service_config = ServiceConfig {
-        method: crate::config::Method::ANY,
-        query_params: vec![UrlParam {
-            key: "test".to_string(),
-            value: "test".to_string(),
-            action: Action::Add,
-        }],
-        headers: vec![Header {
-            key: "test".to_string(),
-            value: "test".to_string(),
-            action: Action::Add,
-        }],
-        url: "http://httpbin.org/get".to_string(),
-        handler: ProxyParams {
-            params: json! ({
-                "key":"rama",
-                "value": "ranga"
-            }),
-            handler_type: "header_auth".to_string(),
-        },
-    };
-    let proxy_service = Box::new(HeaderAuth2::try_from(&header_service_config).unwrap());
-    let header_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
-        (header_service_config, proxy_service);
+
+    let https = HttpsConnector::new();
+    let client = Client::builder().build::<_, hyper::Body>(https);
+    let service = ServiceBuilder::new()
+        .layer(BasicAuthLayer::new(
+            "prasanth".to_string(),
+            "prasanth".to_string(),
+        ))
+        .service(client);
+    let basic_auth: Box<dyn ProxyService> = Box::new(service);
+    let basic_auth_config: (ServiceConfig, Box<dyn ProxyService>) = (service_config, basic_auth);
+    // let header_service_config = ServiceConfig {
+    //     method: crate::config::Method::ANY,
+    //     query_params: vec![UrlParam {
+    //         key: "test".to_string(),
+    //         value: "test".to_string(),
+    //         action: Action::Add,
+    //     }],
+    //     headers: vec![Header {
+    //         key: "test".to_string(),
+    //         value: "test".to_string(),
+    //         action: Action::Add,
+    //     }],
+    //     url: "http://httpbin.org/get".to_string(),
+    //     handler: ProxyParams {
+    //         params: json! ({
+    //             "key":"rama",
+    //             "value": "ranga"
+    //         }),
+    //         handler_type: "header_auth".to_string(),
+    //     },
+    // };
     SimpleProjectHandler {
         projects: vec![Box::new(SimpleProject {
             name: "first",
             services: HashMap::from_iter([
                 ("sample1", basic_auth_config),
-                ("second", header_auth_config),
+                // ("second", header_auth_config),
             ]),
         })],
     }
