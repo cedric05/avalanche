@@ -2,24 +2,26 @@ use std::{error::Error, str::FromStr};
 
 use http::{header::HeaderName, HeaderValue, Request, Uri};
 use hyper::Body;
+use serde::{Deserialize, Serialize};
+
 use url::Url;
 
 #[allow(unused)]
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum Action {
     Add,
     Discard,
     Pass,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct Header {
     pub key: String,
     pub value: String,
     pub action: Action,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct UrlParam {
     pub key: String,
     pub value: String,
@@ -27,7 +29,7 @@ pub struct UrlParam {
 }
 
 #[allow(unused)]
-#[derive(Clone, Debug, Eq, PartialEq, Copy, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Copy, Hash, Serialize, Deserialize)]
 pub enum Method {
     GET,
     POST,
@@ -54,7 +56,7 @@ pub enum Method {
     ANY,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ServiceConfig {
     pub url: String,
     pub method: Method,
@@ -63,7 +65,7 @@ pub struct ServiceConfig {
     pub handler: ProxyParams,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 
 pub struct ProxyParams {
     pub params: serde_json::Value,

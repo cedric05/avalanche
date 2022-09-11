@@ -25,7 +25,7 @@ async fn main_service(
 pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // For every connection, we must make a `Service` to handle all
     // incoming HTTP requests on said connection.
-    let project_handler = simple_project_handler();
+    let project_handler = simple_project_handler()?;
     let project_handler = Arc::new(tokio::sync::Mutex::new(project_handler));
     let make_svc = make_service_fn(|_conn| {
         // This is the `Service` that will handle the connection.
