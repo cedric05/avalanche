@@ -78,14 +78,14 @@ impl TryFrom<Value> for SimpleProject {
         let service_map = DashMap::new();
         for (service_key, service_config_value) in value.into_iter() {
             let service_config = service_config_value.take();
-            let service_config: ServiceConfig = serde_json::from_value(service_config).unwrap();
+            let service_config: ServiceConfig = serde_json::from_value(service_config)
+                .map_err(|_| MarsError::ServiceConfigError)?;
             match service_config.handler.handler_type.as_str() {
                 "basic_auth" => {
                     let basic_auth_service =
                         BasicAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(
                             &service_config,
-                        )
-                        .unwrap();
+                        )?;
                     let basic_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
                         (service_config, Box::new(basic_auth_service));
                     service_map.insert(service_key.to_string(), basic_auth_config);
@@ -94,16 +94,16 @@ impl TryFrom<Value> for SimpleProject {
                     let header_auth_service =
                         HeaderAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(
                             &service_config,
-                        )
-                        .unwrap();
+                        )?;
                     let header_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
                         (service_config, Box::new(header_auth_service));
                     service_map.insert(service_key.to_string(), header_auth_config);
                 }
                 "aws_auth" => {
                     let aws_auth_service =
-                        AwsAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(&service_config)
-                            .unwrap();
+                        AwsAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(
+                            &service_config,
+                        )?;
                     let aws_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
                         (service_config, Box::new(aws_auth_service));
                     service_map.insert(service_key.to_string(), aws_auth_config);

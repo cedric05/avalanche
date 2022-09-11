@@ -43,8 +43,12 @@
 - kind: 2
   language: dothttp-vscode
   value: |-
-    GET 'http://localhost:3000/first/aws_auth'
-    json({
-        "hai": "bye"
-    })
+    GET 'http://localhost:3000/first/aws_auth/'
+    ?Action=DescribeInstances
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |-
+    GET 'https://ec2.amazonaws.com'
+    ?Action=DescribeInstances
   outputs: []

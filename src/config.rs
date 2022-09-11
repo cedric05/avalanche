@@ -82,6 +82,7 @@ lazy_static::lazy_static! {
         HeaderName::from_str("Trailers").unwrap(),
         HeaderName::from_str("Transfer-Encoding").unwrap(),
         HeaderName::from_str("Upgrade").unwrap(),
+        HeaderName::from_str("Host").unwrap(),
     ];
 }
 impl ServiceConfig {

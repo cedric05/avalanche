@@ -84,7 +84,8 @@ where
             req.method(),
             req.uri(),
             req.headers(),
-            SignableBody::UnsignedPayload,
+            // TODO bytable request is not working
+            SignableBody::Bytes(b""),
         );
         let out = sign(signable, &params).unwrap();
         let (output, _signature) = out.into_parts();
