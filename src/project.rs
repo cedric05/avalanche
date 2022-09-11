@@ -180,9 +180,12 @@ impl ProjectHandler for SimpleProjectHandler {
         let rest = url_split.next().unwrap_or("");
         println!("project is {} and service is {}", project, service);
         if self.projects.contains_key(project) {
-            let mut get_mut = self.projects.get_mut(project);
-            let mut project = get_mut.unwrap();
-            let mut service_n_config = project.get_service(service.to_string()).await.unwrap();
+            let get_mut = self.projects.get_mut(project);
+            let project = get_mut.ok_or(MarsError::ServiceConfigError)?;
+            let mut service_n_config = project
+                .get_service(service.to_string())
+                .await
+                .ok_or(MarsError::ServiceConfigError)?;
             let (service_config, service) = service_n_config.value_mut();
             return service.handle_service(rest, service_config, request).await;
         }
