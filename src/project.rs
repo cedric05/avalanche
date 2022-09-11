@@ -58,7 +58,7 @@ trait Project: Sync + Send + DynClone {
     async fn get_service(
         &self,
         path: String,
-    ) -> Option<RefMut<'async_trait, String, (ServiceConfig, Box<dyn ProxyService>)>>;
+    ) -> Option<RefMut<String, (ServiceConfig, Box<dyn ProxyService>)>>;
 }
 
 clone_trait_object!(Project);
@@ -153,7 +153,7 @@ impl<'a> Project for SimpleProject<'a> {
     async fn get_service(
         &self,
         path: String,
-    ) -> Option<RefMut<'async_trait, String, (ServiceConfig, Box<dyn ProxyService>)>> {
+    ) -> Option<RefMut<String, (ServiceConfig, Box<dyn ProxyService>)>> {
         self.services.get_mut(&path)
     }
 }
