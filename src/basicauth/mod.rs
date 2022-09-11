@@ -35,10 +35,9 @@ impl BasicAuthLayer {
         username: &str,
         password: &str,
     ) -> Result<BasicAuthLayer, InvalidHeaderValue> {
-        Ok(BasicAuthLayer::new(HeaderValue::from_str(&format!(
-            "{}:{}",
-            username, password
-        ))?))
+        let authentication = format!("{}:{}", username, password);
+        let authentication = base64::encode(authentication);
+        Ok(BasicAuthLayer::new(HeaderValue::from_str(&authentication)?))
     }
 }
 
@@ -70,7 +69,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use http::{HeaderValue, Request, Response};
+    use http::{Request, Response};
     use hyper::{client::HttpConnector, Client};
     use hyper_tls::HttpsConnector;
     use std::{future::Future, pin::Pin};
@@ -95,9 +94,7 @@ mod test {
         let https = HttpsConnector::new();
         let client = Client::builder().build::<_, hyper::Body>(https);
         let service = ServiceBuilder::new()
-            .layer(BasicAuthLayer::from_username_n_password(
-                "prasanth", "prasanth",
-            ))
+            .layer(BasicAuthLayer::from_username_n_password("prasanth", "prasanth").unwrap())
             .service(client);
         let mut service: Box<dyn ProxyService> = Box::new(service);
         let request = Request::builder()
