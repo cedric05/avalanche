@@ -6,10 +6,6 @@ use hyper::{Body, Request, Response, Server};
 use mars_rover::project::ProjectHandler;
 use mars_rover::simple::{simple_project_handler, SimpleProjectHandler};
 
-mod basicauth;
-mod config;
-mod project;
-
 async fn main_service(
     request: Request<Body>,
     project_handler: Arc<tokio::sync::Mutex<SimpleProjectHandler>>,

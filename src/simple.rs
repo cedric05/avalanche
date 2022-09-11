@@ -1,17 +1,17 @@
-use std::error::Error;
+use std::{convert::TryFrom, error::Error};
 
 use async_trait::async_trait;
 use dashmap::{mapref::one::RefMut, DashMap};
 use http::Response;
-use hyper::{Body, Client};
+use hyper::{client::HttpConnector, Body, Client};
 use hyper_tls::HttpsConnector;
 use serde_json::json;
-use tower::ServiceBuilder;
 
 use crate::{
-    basicauth::BasicAuthLayer,
+    basicauth::BasicAuth,
     config::{Action, Header, ProxyParams, ServiceConfig, UrlParam},
     error::MarsError,
+    headerauth::HeaderAuth,
     project::{Project, ProjectHandler, ProxyService},
 };
 
@@ -93,37 +93,41 @@ pub fn simple_project_handler() -> SimpleProjectHandler {
         },
     };
 
-    let https = HttpsConnector::new();
-    let client = Client::builder().build::<_, hyper::Body>(https);
-    let service = ServiceBuilder::new()
-        .layer(BasicAuthLayer::from_username_n_password("prasanth", "prasanth").unwrap())
-        .service(client);
-    let basic_auth: Box<dyn ProxyService> = Box::new(service);
-    let basic_auth_config: (ServiceConfig, Box<dyn ProxyService>) = (service_config, basic_auth);
-    // let header_service_config = ServiceConfig {
-    //     method: crate::config::Method::ANY,
-    //     query_params: vec![UrlParam {
-    //         key: "test".to_string(),
-    //         value: "test".to_string(),
-    //         action: Action::Add,
-    //     }],
-    //     headers: vec![Header {
-    //         key: "test".to_string(),
-    //         value: "test".to_string(),
-    //         action: Action::Add,
-    //     }],
-    //     url: "http://httpbin.org/get".to_string(),
-    //     handler: ProxyParams {
-    //         params: json! ({
-    //             "key":"rama",
-    //             "value": "ranga"
-    //         }),
-    //         handler_type: "header_auth".to_string(),
-    //     },
-    // };
+    let basic_auth_service =
+        BasicAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(&service_config).unwrap();
+    let basic_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
+        (service_config, Box::new(basic_auth_service));
+    let header_service_config = ServiceConfig {
+        method: crate::config::Method::ANY,
+        query_params: vec![UrlParam {
+            key: "test".to_string(),
+            value: "test".to_string(),
+            action: Action::Add,
+        }],
+        headers: vec![Header {
+            key: "test".to_string(),
+            value: "test".to_string(),
+            action: Action::Add,
+        }],
+        url: "http://httpbin.org/get".to_string(),
+        handler: ProxyParams {
+            params: json! ({
+                "key":"rama",
+                "value": "ranga"
+            }),
+            handler_type: "header_auth".to_string(),
+        },
+    };
+
+    let header_auth_service =
+        HeaderAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(&header_service_config)
+            .unwrap();
+    let header_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
+        (header_service_config, Box::new(header_auth_service));
 
     let service_map = DashMap::new();
     service_map.insert("sample1".to_string(), basic_auth_config);
+    service_map.insert("sample2".to_string(), header_auth_config);
     let map: DashMap<String, Box<dyn Project>> = DashMap::new();
     map.insert(
         "first".to_string(),

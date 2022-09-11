@@ -35,7 +35,7 @@
 - kind: 2
   language: dothttp-vscode
   value: |-
-    GET 'http://localhost:3000/first/second/get'
+    GET 'http://localhost:3000/first/sample2/get'
     json({
         "hai": "bye"
     })

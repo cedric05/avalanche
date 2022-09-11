@@ -1,12 +1,14 @@
-use std::{error::Error, future::Future, pin::Pin};
+use std::{convert::TryFrom, error::Error, future::Future, pin::Pin};
+
+use super::error::MarsError;
 
 use super::config::ServiceConfig;
 use super::project::ProxyService;
 use async_trait::async_trait;
 use http::{header::InvalidHeaderValue, HeaderValue, Request, Response};
-use hyper::{client::HttpConnector, Body};
+use hyper::{client::HttpConnector, Body, Client};
 use hyper_tls::HttpsConnector;
-use tower::{Layer, Service};
+use tower::{Layer, Service, ServiceBuilder};
 
 #[derive(Clone)]
 pub struct BasicAuth<S> {
@@ -86,6 +88,42 @@ impl ProxyService for BasicAuth<hyper::Client<HttpsConnector<HttpConnector>>> {
         service_config.get_updated_request(url, &mut request)?;
         let response = self.call(request).await?;
         Ok(response)
+    }
+}
+
+impl TryFrom<&ServiceConfig> for BasicAuthLayer {
+    type Error = MarsError;
+
+    fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
+        let username = value
+            .handler
+            .params
+            .get("username")
+            .ok_or(MarsError::ServiceConfigError)?
+            .as_str()
+            .ok_or(MarsError::ServiceConfigError)?;
+        let password = value
+            .handler
+            .params
+            .get("password")
+            .ok_or(MarsError::ServiceConfigError)?
+            .as_str()
+            .ok_or(MarsError::ServiceConfigError)?;
+        let basic_auth_layer = BasicAuthLayer::from_username_n_password(username, password)
+            .map_err(|_| MarsError::ServiceConfigError)?;
+        Ok(basic_auth_layer)
+    }
+}
+
+impl TryFrom<&ServiceConfig> for BasicAuth<Client<HttpsConnector<HttpConnector>>> {
+    type Error = MarsError;
+
+    fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
+        let https = HttpsConnector::new();
+        let client = Client::builder().build::<_, hyper::Body>(https);
+        let auth_layer = BasicAuthLayer::try_from(value)?;
+        let res = ServiceBuilder::new().layer(auth_layer).service(client);
+        Ok(res)
     }
 }
 
