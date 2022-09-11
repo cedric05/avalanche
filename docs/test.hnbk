@@ -40,3 +40,11 @@
         "hai": "bye"
     })
   outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |-
+    GET 'http://localhost:3000/first/aws_auth'
+    json({
+        "hai": "bye"
+    })
+  outputs: []

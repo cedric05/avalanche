@@ -1,3 +1,4 @@
+pub mod awsauth;
 pub mod basicauth;
 pub mod config;
 pub mod error;

@@ -1,6 +1,6 @@
 use std::{convert::TryFrom, error::Error};
 
-use crate::error::MarsError;
+use crate::{awsauth::AwsAuth, error::MarsError};
 use async_trait::async_trait;
 use dashmap::{mapref::one::RefMut, DashMap};
 use http::Response;
@@ -100,6 +100,14 @@ impl TryFrom<Value> for SimpleProject {
                         (service_config, Box::new(header_auth_service));
                     service_map.insert(service_key.to_string(), header_auth_config);
                 }
+                "aws_auth" => {
+                    let aws_auth_service =
+                        AwsAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(&service_config)
+                            .unwrap();
+                    let aws_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
+                        (service_config, Box::new(aws_auth_service));
+                    service_map.insert(service_key.to_string(), aws_auth_config);
+                }
                 _ => {
                     unimplemented!()
                 }
@@ -169,6 +177,21 @@ pub fn simple_project_handler() -> Result<SimpleProjectHandler, MarsError> {
                 "handler":{
                     "params":{"key":"rama","value":"ranga"},
                     "handler_type":"header_auth"
+                }
+            },
+            "aws_auth":{
+                "url":"https://httpbin.org/get",
+                "method":"ANY",
+                "query_params":[],
+                "headers":[],
+                "handler":{
+                    "params":{
+                        "access_key": "AKIDEXAMPLE",
+                        "secret_key":"wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY",
+                        "region":"us-east-1",
+                        "service":"service"
+                    },
+                    "handler_type":"aws_auth"
                 }
             }
         }
