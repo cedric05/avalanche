@@ -67,57 +67,55 @@ where
 
 #[cfg(test)]
 mod test {
-    // use http::{Request, Response};
-    // use hyper::{client::HttpConnector, Client};
-    // use hyper_tls::HttpsConnector;
-    // use std::{future::Future, pin::Pin};
-    // use tower::{Service, ServiceBuilder};
+    use http::{Request, Response};
+    use hyper::{client::HttpConnector, Client};
+    use hyper_tls::HttpsConnector;
+    use std::{future::Future, pin::Pin};
+    use tower::{Service, ServiceBuilder};
 
-    // use super::{BasicAuth, BasicAuthLayer};
+    use super::{BasicAuth, BasicAuthLayer};
 
-    // pub trait ProxyService:
-    //     Service<
-    //     Request<hyper::Body>,
-    //     Response = Response<hyper::Body>,
-    //     Error = hyper::Error,
-    //     Future = Pin<
-    //         Box<dyn Future<Output = Result<Response<hyper::Body>, hyper::Error>> + 'static>,
-    //     >,
-    // >
-    // {
-    // }
+    pub trait ProxyService:
+        Service<
+        Request<hyper::Body>,
+        Response = Response<hyper::Body>,
+        Error = hyper::Error,
+        Future = Pin<Box<dyn Future<Output = Result<Response<hyper::Body>, hyper::Error>> + Send>>,
+    >
+    {
+    }
 
-    // impl ProxyService for BasicAuth<hyper::Client<HttpsConnector<HttpConnector>>> {}
+    impl ProxyService for BasicAuth<hyper::Client<HttpsConnector<HttpConnector>>> {}
 
-    // #[tokio::test]
-    // async fn basic_test() {
-    //     let https = HttpsConnector::new();
-    //     let client = Client::builder().build::<_, hyper::Body>(https);
-    //     let service = ServiceBuilder::new()
-    //         .layer(BasicAuthLayer::new(
-    //             "prasanth".to_string(),
-    //             "prasanth".to_string(),
-    //         ))
-    //         .service(client);
-    //     let mut service: Box<dyn ProxyService> = Box::new(service);
-    //     let request = Request::builder()
-    //         .uri("https://httpbin.org/get")
-    //         .body(hyper::Body::empty())
-    //         .unwrap();
-    //     let response = service.call(request).await.unwrap();
-    //     let body_bytes = hyper::body::to_bytes(response.into_body()).await.unwrap();
-    //     let s: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
-    //     let authentication = s
-    //         .as_object()
-    //         .unwrap()
-    //         .get("headers")
-    //         .unwrap()
-    //         .as_object()
-    //         .unwrap()
-    //         .get("Authentication")
-    //         .unwrap()
-    //         .as_str()
-    //         .unwrap();
-    //     assert_eq!("cHJhc2FudGg6cHJhc2FudGg=", authentication);
-    // }
+    #[tokio::test]
+    async fn basic_test() {
+        let https = HttpsConnector::new();
+        let client = Client::builder().build::<_, hyper::Body>(https);
+        let service = ServiceBuilder::new()
+            .layer(BasicAuthLayer::new(
+                "prasanth".to_string(),
+                "prasanth".to_string(),
+            ))
+            .service(client);
+        let mut service: Box<dyn ProxyService> = Box::new(service);
+        let request = Request::builder()
+            .uri("https://httpbin.org/get")
+            .body(hyper::Body::empty())
+            .unwrap();
+        let response = service.call(request).await.unwrap();
+        let body_bytes = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let s: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+        let authentication = s
+            .as_object()
+            .unwrap()
+            .get("headers")
+            .unwrap()
+            .as_object()
+            .unwrap()
+            .get("Authentication")
+            .unwrap()
+            .as_str()
+            .unwrap();
+        assert_eq!("cHJhc2FudGg6cHJhc2FudGg=", authentication);
+    }
 }

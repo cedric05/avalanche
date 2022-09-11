@@ -1,3 +1,4 @@
+#[allow(unused)]
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Action {
     Add,
@@ -19,6 +20,7 @@ pub struct UrlParam {
     pub action: Action,
 }
 
+#[allow(unused)]
 #[derive(Clone, Debug, Eq, PartialEq, Copy, Hash)]
 pub enum Method {
     GET,
