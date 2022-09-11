@@ -219,10 +219,7 @@ pub fn simple_project_handler() -> SimpleProjectHandler {
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
     let service = ServiceBuilder::new()
-        .layer(BasicAuthLayer::new(
-            "prasanth".to_string(),
-            "prasanth".to_string(),
-        ))
+        .layer(BasicAuthLayer::from_username_n_password("prasanth", "prasanth").unwrap())
         .service(client);
     let basic_auth: Box<dyn ProxyService> = Box::new(service);
     let basic_auth_config: (ServiceConfig, Box<dyn ProxyService>) = (service_config, basic_auth);

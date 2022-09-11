@@ -1,23 +1,21 @@
 use std::{future::Future, pin::Pin};
 
-use http::{HeaderValue, Request, Response};
+use http::{header::InvalidHeaderValue, HeaderValue, Request, Response};
 use tower::{Layer, Service};
 
 #[derive(Clone)]
 pub struct BasicAuth<S> {
-    username: String,
-    password: String,
+    authentication: HeaderValue,
     pub inner: S,
 }
 
 pub struct BasicAuthLayer {
-    username: String,
-    password: String,
+    authentication: HeaderValue,
 }
 
 impl BasicAuthLayer {
-    pub fn new(username: String, password: String) -> Self {
-        BasicAuthLayer { username, password }
+    pub fn new(authentication: HeaderValue) -> Self {
+        BasicAuthLayer { authentication }
     }
 }
 
@@ -26,10 +24,21 @@ impl<S> Layer<S> for BasicAuthLayer {
 
     fn layer(&self, inner: S) -> Self::Service {
         BasicAuth {
-            username: self.username.to_string(),
-            password: self.password.to_string(),
+            authentication: self.authentication.clone(),
             inner: inner,
         }
+    }
+}
+
+impl BasicAuthLayer {
+    pub fn from_username_n_password(
+        username: &str,
+        password: &str,
+    ) -> Result<BasicAuthLayer, InvalidHeaderValue> {
+        Ok(BasicAuthLayer::new(HeaderValue::from_str(&format!(
+            "{}:{}",
+            username, password
+        ))?))
     }
 }
 
@@ -52,14 +61,8 @@ where
 
     fn call(&mut self, req: Request<ReqBody>) -> Self::Future {
         let mut req = req;
-        req.headers_mut().append(
-            "Authentication",
-            HeaderValue::from_str(&base64::encode(format!(
-                "{}:{}",
-                self.username, self.password
-            )))
-            .unwrap(),
-        );
+        req.headers_mut()
+            .append("Authentication", self.authentication.clone());
         let fut = self.inner.call(req);
         Box::pin(async move { fut.await })
     }
@@ -67,7 +70,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use http::{Request, Response};
+    use http::{HeaderValue, Request, Response};
     use hyper::{client::HttpConnector, Client};
     use hyper_tls::HttpsConnector;
     use std::{future::Future, pin::Pin};
@@ -92,9 +95,8 @@ mod test {
         let https = HttpsConnector::new();
         let client = Client::builder().build::<_, hyper::Body>(https);
         let service = ServiceBuilder::new()
-            .layer(BasicAuthLayer::new(
-                "prasanth".to_string(),
-                "prasanth".to_string(),
+            .layer(BasicAuthLayer::from_username_n_password(
+                "prasanth", "prasanth",
             ))
             .service(client);
         let mut service: Box<dyn ProxyService> = Box::new(service);
