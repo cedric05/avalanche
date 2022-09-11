@@ -1,9 +1,8 @@
-use std::{
-    collections::HashMap, error::Error, fmt::Display, future::Future, pin::Pin, str::FromStr, vec,
-};
+use std::{error::Error, fmt::Display, future::Future, pin::Pin, str::FromStr, vec};
 
 use crate::basicauth::{BasicAuth, BasicAuthLayer};
 use async_trait::async_trait;
+use dashmap::{mapref::one::RefMut, DashMap};
 use dyn_clone::{clone_trait_object, DynClone};
 use http::{header::HeaderName, HeaderValue, Request, Response, Uri};
 use hyper::{client::HttpConnector, service::Service, Body, Client};
@@ -57,9 +56,9 @@ trait Project: Sync + Send + DynClone {
     async fn is_project(&self, path: &str) -> bool;
 
     async fn get_service(
-        &mut self,
-        path: &str,
-    ) -> Option<&mut (ServiceConfig, Box<dyn ProxyService>)>;
+        &self,
+        path: String,
+    ) -> Option<RefMut<'async_trait, String, (ServiceConfig, Box<dyn ProxyService>)>>;
 }
 
 clone_trait_object!(Project);
@@ -142,7 +141,7 @@ impl ServiceConfig {
 #[derive(Clone)]
 struct SimpleProject<'a> {
     name: &'a str,
-    services: HashMap<&'a str, (ServiceConfig, Box<dyn ProxyService>)>,
+    services: DashMap<String, (ServiceConfig, Box<dyn ProxyService>)>,
 }
 
 #[async_trait]
@@ -152,16 +151,16 @@ impl<'a> Project for SimpleProject<'a> {
     }
 
     async fn get_service(
-        &mut self,
-        path: &str,
-    ) -> Option<&mut (ServiceConfig, Box<dyn ProxyService>)> {
-        self.services.get_mut(path)
+        &self,
+        path: String,
+    ) -> Option<RefMut<'async_trait, String, (ServiceConfig, Box<dyn ProxyService>)>> {
+        self.services.get_mut(&path)
     }
 }
 
 #[derive(Clone)]
 pub struct SimpleProjectHandler {
-    projects: Vec<Box<dyn Project>>,
+    projects: DashMap<String, Box<dyn Project>>,
 }
 
 // unsafe impl Send for SimpleProjectHandler {}
@@ -180,16 +179,12 @@ impl ProjectHandler for SimpleProjectHandler {
         let service = url_split.next().ok_or(MarsError::UrlError)?;
         let rest = url_split.next().unwrap_or("");
         println!("project is {} and service is {}", project, service);
-        for a_project in &mut self.projects {
-            if a_project.is_project(project).await {
-                let service_config = a_project.get_service(service).await;
-                match service_config {
-                    Some((config, service)) => {
-                        return service.handle_service(rest, config, request).await;
-                    }
-                    None => {}
-                }
-            }
+        if self.projects.contains_key(project) {
+            let mut get_mut = self.projects.get_mut(project);
+            let mut project = get_mut.unwrap();
+            let mut service_n_config = project.get_service(service.to_string()).await.unwrap();
+            let (service_config, service) = service_n_config.value_mut();
+            return service.handle_service(rest, service_config, request).await;
         }
         Ok(Response::builder().status(404).body(Body::empty()).unwrap())
     }
@@ -249,13 +244,16 @@ pub fn simple_project_handler() -> SimpleProjectHandler {
     //         handler_type: "header_auth".to_string(),
     //     },
     // };
-    SimpleProjectHandler {
-        projects: vec![Box::new(SimpleProject {
+
+    let service_map = DashMap::new();
+    service_map.insert("sample1".to_string(), basic_auth_config);
+    let map: DashMap<String, Box<dyn Project>> = DashMap::new();
+    map.insert(
+        "first".to_string(),
+        Box::new(SimpleProject {
             name: "first",
-            services: HashMap::from_iter([
-                ("sample1", basic_auth_config),
-                // ("second", header_auth_config),
-            ]),
-        })],
-    }
+            services: service_map,
+        }),
+    );
+    SimpleProjectHandler { projects: map }
 }
