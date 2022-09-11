@@ -1,6 +1,11 @@
-use std::{future::Future, pin::Pin};
+use std::{error::Error, future::Future, pin::Pin};
 
+use super::config::ServiceConfig;
+use super::project::ProxyService;
+use async_trait::async_trait;
 use http::{header::InvalidHeaderValue, HeaderValue, Request, Response};
+use hyper::{client::HttpConnector, Body};
+use hyper_tls::HttpsConnector;
 use tower::{Layer, Service};
 
 #[derive(Clone)]
@@ -13,6 +18,7 @@ pub struct BasicAuthLayer {
     authentication: HeaderValue,
 }
 
+#[allow(unused)]
 impl BasicAuthLayer {
     pub fn new(authentication: HeaderValue) -> Self {
         BasicAuthLayer { authentication }
@@ -30,6 +36,7 @@ impl<S> Layer<S> for BasicAuthLayer {
     }
 }
 
+#[allow(unused)]
 impl BasicAuthLayer {
     pub fn from_username_n_password(
         username: &str,
@@ -64,6 +71,21 @@ where
             .append("Authentication", self.authentication.clone());
         let fut = self.inner.call(req);
         Box::pin(async move { fut.await })
+    }
+}
+
+#[async_trait]
+impl ProxyService for BasicAuth<hyper::Client<HttpsConnector<HttpConnector>>> {
+    async fn handle_service(
+        &mut self,
+        url: &str,
+        service_config: &ServiceConfig,
+        request: hyper::Request<Body>,
+    ) -> Result<Response<Body>, Box<dyn Error>> {
+        let mut request = request;
+        service_config.get_updated_request(url, &mut request)?;
+        let response = self.call(request).await?;
+        Ok(response)
     }
 }
 

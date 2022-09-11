@@ -3,7 +3,8 @@ use std::sync::Arc;
 
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
-use project::{simple_project_handler, ProjectHandler, SimpleProjectHandler};
+use mars_rover::project::ProjectHandler;
+use mars_rover::simple::{simple_project_handler, SimpleProjectHandler};
 
 mod basicauth;
 mod config;
