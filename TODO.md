@@ -15,6 +15,11 @@
 - [x] Aws auth (https://github.com/awslabs/aws-sdk-rust/blob/main/sdk/aws-sig-auth/src/lib.rs)
 - [ ] digest auth???
 - [x] save header information safely
+- [ ] x503 authentication
+- [ ] soap basic authentication
+- [ ] soap x503 authentication
+- [ ] hawk auth
+- [ ] oauth
 
 # TODO Response
 - [ ] remove few headers from response
