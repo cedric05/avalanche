@@ -79,8 +79,8 @@ where
         let region = self.region.clone();
         let service_name = self.service_name.clone();
         let (parts, body) = req.into_parts();
-        // let fut = self.inner.call(req);
-        let fut = async move {
+        let mut orig = self.clone();
+        Box::pin(async move {
             let settings = SigningSettings::default();
             let params: SignparamsBuilder<SigningSettings> = Default::default();
             let params = params
@@ -92,7 +92,7 @@ where
                 .settings(settings)
                 .build()
                 .unwrap();
-            let body = body::to_bytes(body).await.unwrap();
+            let body = body::to_bytes(body).await?;
             println!("bytes is {:?}", &body);
             let signable = SignableRequest::new(
                 &parts.method,
@@ -106,13 +106,6 @@ where
             let body = hyper::Body::from(body);
             let mut signable = Request::from_parts(parts, body);
             output.apply_to_request(&mut signable);
-            signable
-        };
-        // let out = fut.then(|signable| self.inner.call(signable));
-        // let x = ;
-        let mut orig = self.clone();
-        Box::pin(async move {
-            let signable = fut.await;
             let res = orig.inner.call(signable).await;
             res
         })
