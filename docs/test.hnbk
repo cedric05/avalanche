@@ -49,6 +49,7 @@
 - kind: 2
   language: dothttp-vscode
   value: |-
-    GET 'https://ec2.amazonaws.com'
-    ?Action=DescribeInstances
+    GET 'https://ec2.amazonaws.com/?Action=DescribeInstances'
+    // awsauth("","","ec2", 'us-east-1')
+    // ?Action=DescribeInstances
   outputs: []

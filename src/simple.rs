@@ -180,16 +180,16 @@ pub fn simple_project_handler() -> Result<SimpleProjectHandler, MarsError> {
                 }
             },
             "aws_auth":{
-                "url":"https://httpbin.org/get",
+                "url":"https://ec2.amazonaws.com/",
                 "method":"ANY",
                 "query_params":[],
                 "headers":[],
                 "handler":{
                     "params":{
-                        "access_key": "AKIDEXAMPLE",
-                        "secret_key":"wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY",
+                        "access_key": "",
+                        "secret_key":"",
                         "region":"us-east-1",
-                        "service":"service"
+                        "service":"ec2"
                     },
                     "handler_type":"aws_auth"
                 }

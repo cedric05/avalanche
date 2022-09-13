@@ -10,7 +10,7 @@ use aws_sigv4::{http_request::SigningSettings, signing_params::Builder as Signpa
 use http::{Request, Response};
 use hyper::client::HttpConnector;
 
-use hyper::{Body, Client};
+use hyper::{body, Body, Client};
 use hyper_tls::HttpsConnector;
 
 use tower::{Layer, Service, ServiceBuilder};
@@ -49,15 +49,22 @@ impl<S> Layer<S> for AwsAuthLayer {
     }
 }
 
-impl<ReqBody, ResBody, S> Service<Request<ReqBody>> for AwsAuth<S>
+type ResBody = hyper::Body;
+type ReqBody = hyper::Body;
+type HyperError = hyper::Error;
+
+impl<S> Service<Request<ReqBody>> for AwsAuth<S>
 where
-    S: Service<Request<ReqBody>, Response = Response<ResBody>>,
+    S: Service<Request<ReqBody>, Response = Response<ResBody>, Error = HyperError>
+        + Send
+        + 'static
+        + Clone,
     S::Future: 'static,
     <S as Service<Request<ReqBody>>>::Future: Send,
 {
-    type Response = S::Response;
+    type Response = Response<ResBody>;
     type Error = S::Error;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+    type Future = Pin<Box<dyn Future<Output = Result<Response<ResBody>, Self::Error>> + Send>>;
 
     fn poll_ready(
         &mut self,
@@ -67,31 +74,48 @@ where
     }
 
     fn call(&mut self, req: Request<ReqBody>) -> Self::Future {
-        let mut req = req;
-        let settings = SigningSettings::default();
-        let params: SignparamsBuilder<SigningSettings> = Default::default();
-        let params = params
-            .access_key(&self.access_key)
-            .secret_key(&self.secret_key)
-            .region(&self.region)
-            .service_name(&self.service_name)
-            .time(SystemTime::now())
-            .settings(settings)
-            .build()
-            .unwrap();
-
-        let signable = SignableRequest::new(
-            req.method(),
-            req.uri(),
-            req.headers(),
-            // TODO bytable request is not working
-            SignableBody::Bytes(b""),
-        );
-        let out = sign(signable, &params).unwrap();
-        let (output, _signature) = out.into_parts();
-        output.apply_to_request(&mut req);
-        let fut = self.inner.call(req);
-        Box::pin(async move { fut.await })
+        let access_key = self.access_key.clone();
+        let secret_key = self.secret_key.clone();
+        let region = self.region.clone();
+        let service_name = self.service_name.clone();
+        let (parts, body) = req.into_parts();
+        // let fut = self.inner.call(req);
+        let fut = async move {
+            let settings = SigningSettings::default();
+            let params: SignparamsBuilder<SigningSettings> = Default::default();
+            let params = params
+                .access_key(&access_key)
+                .secret_key(&secret_key)
+                .region(&region)
+                .service_name(&service_name)
+                .time(SystemTime::now())
+                .settings(settings)
+                .build()
+                .unwrap();
+            let body = body::to_bytes(body).await.unwrap();
+            println!("bytes is {:?}", &body);
+            let signable = SignableRequest::new(
+                &parts.method,
+                &parts.uri,
+                &parts.headers,
+                // TODO bytable request is not working
+                SignableBody::Bytes(&body),
+            );
+            let out = sign(signable, &params).unwrap();
+            let (output, _signature) = out.into_parts();
+            let body = hyper::Body::from(body);
+            let mut signable = Request::from_parts(parts, body);
+            output.apply_to_request(&mut signable);
+            signable
+        };
+        // let out = fut.then(|signable| self.inner.call(signable));
+        // let x = ;
+        let mut orig = self.clone();
+        Box::pin(async move {
+            let signable = fut.await;
+            let res = orig.inner.call(signable).await;
+            res
+        })
     }
 }
 
