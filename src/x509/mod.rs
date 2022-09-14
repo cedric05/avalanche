@@ -16,7 +16,7 @@ pub struct SslAuth<S> {
     inner: S,
 }
 
-struct SslAuthLayer {}
+struct SslAuthLayer;
 
 impl<S> Layer<S> for SslAuthLayer {
     type Service = SslAuth<S>;
@@ -104,7 +104,7 @@ impl TryFrom<&ServiceConfig> for SslAuth<Client<HttpsConnector<HttpConnector>>> 
         let https: HttpsConnector<HttpConnector> =
             HttpsConnector::from((http_connector, tokio_native_tls_connector));
         let client = Client::builder().build::<_, hyper::Body>(https);
-        let service = ServiceBuilder::new().layer(SslAuthLayer {}).service(client);
+        let service = ServiceBuilder::new().layer(SslAuthLayer).service(client);
         Ok(service)
     }
 }
