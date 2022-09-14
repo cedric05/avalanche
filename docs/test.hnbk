@@ -1,7 +1,14 @@
 - kind: 2
   language: dothttp-vscode
   value: |-
-    POST 'http://localhost:3000/first/sample1/post'
+    @name('base')
+    GET 'http://localhost:3000/first/'
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |-
+    @name('simple post'): "base"
+    POST '/sample1/post'
     ? hai = bye
     json({
         "hai3": "bye3"
@@ -10,16 +17,8 @@
 - kind: 2
   language: dothttp-vscode
   value: |-
-    POST 'http://localhost:3000/first/sample1/post'
-    ? hai = bye
-    json({
-        "hai3": "bye3"
-    })
-  outputs: []
-- kind: 2
-  language: dothttp-vscode
-  value: |-
-    GET 'http://localhost:3000/first/sample1'
+    @name('simple get'): "base"
+    GET '/sample1'
     json({
         "hai": "bye"
     })
@@ -27,7 +26,8 @@
 - kind: 2
   language: dothttp-vscode
   value: |-
-    GET 'http://localhost:3000/first/sample1'
+    @name('header auth'): "base"
+    GET '/sample2/get'
     json({
         "hai": "bye"
     })
@@ -35,15 +35,8 @@
 - kind: 2
   language: dothttp-vscode
   value: |-
-    GET 'http://localhost:3000/first/sample2/get'
-    json({
-        "hai": "bye"
-    })
-  outputs: []
-- kind: 2
-  language: dothttp-vscode
-  value: |-
-    GET 'http://localhost:3000/first/aws_auth/'
+    @name('aws auth'): "base"
+    GET '/aws_auth/'
     ?Action=DescribeInstances
   outputs: []
 - kind: 2
@@ -52,4 +45,11 @@
     GET 'https://ec2.amazonaws.com/?Action=DescribeInstances'
     // awsauth("","","ec2", 'us-east-1')
     // ?Action=DescribeInstances
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |-
+
+    @name('ssl'): "base"
+    GET '/ssl'
   outputs: []

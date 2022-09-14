@@ -1,9 +1,10 @@
-use std::fmt::Display;
+use std::{error::Error, fmt::Display};
 
 #[derive(Debug)]
 pub enum MarsError {
     UrlError,
     ServiceConfigError,
+    Error(Box<dyn Error + Sync + Send>),
 }
 
 impl Display for MarsError {
@@ -11,6 +12,7 @@ impl Display for MarsError {
         match self {
             MarsError::UrlError => f.write_str("urlerror"),
             MarsError::ServiceConfigError => f.write_str("service config error"),
+            MarsError::Error(error) => writeln!(f, "dynamic error error {}", error),
         }
     }
 }
