@@ -1,15 +1,14 @@
-use std::{convert::TryFrom, error::Error, future::Future, pin::Pin};
+use std::{convert::TryFrom, future::Future, pin::Pin};
 
-use async_trait::async_trait;
 use http::{Request, Response};
-use hyper::{client::HttpConnector, Body, Client};
+use hyper::{client::HttpConnector, Client};
 use hyper_tls::HttpsConnector;
 use native_tls::{Identity, TlsConnector};
 use tokio_native_tls::TlsConnector as TokioNativeTlsConnector;
 
 use tower::{Layer, Service, ServiceBuilder};
 
-use crate::{config::ServiceConfig, error::MarsError, project::ProxyService};
+use crate::{config::ServiceConfig, error::MarsError};
 
 #[derive(Clone)]
 pub struct SslAuth<S> {
@@ -30,20 +29,8 @@ impl TryFrom<&ServiceConfig> for Identity {
     type Error = MarsError;
 
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let pkcs_der = value
-            .handler
-            .params
-            .get("pkcs12")
-            .ok_or(MarsError::ServiceConfigError)?
-            .as_str()
-            .ok_or(MarsError::ServiceConfigError)?;
-        let password = value
-            .handler
-            .params
-            .get("pkcs12_password")
-            .ok_or(MarsError::ServiceConfigError)?
-            .as_str()
-            .ok_or(MarsError::ServiceConfigError)?;
+        let pkcs_der = value.get_handler_config("pkcs12")?;
+        let password = value.get_handler_config("pkcs12_password")?;
         let pkcs_der = base64::decode(pkcs_der).map_err(|_| MarsError::ServiceConfigError)?;
         let identity = Identity::from_pkcs12(&pkcs_der, password)
             .map_err(|_| MarsError::ServiceConfigError)?;
@@ -71,21 +58,6 @@ where
     fn call(&mut self, req: Request<ReqBody>) -> Self::Future {
         let fut = self.inner.call(req);
         Box::pin(async { fut.await })
-    }
-}
-
-#[async_trait]
-impl ProxyService for SslAuth<hyper::Client<HttpsConnector<HttpConnector>>> {
-    async fn handle_service(
-        &mut self,
-        url: &str,
-        service_config: &ServiceConfig,
-        request: hyper::Request<Body>,
-    ) -> Result<Response<Body>, Box<dyn Error>> {
-        let mut request = request;
-        service_config.get_updated_request(url, &mut request)?;
-        let response = self.call(request).await?;
-        Ok(response)
     }
 }
 

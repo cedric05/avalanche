@@ -1,12 +1,11 @@
-use std::{convert::TryFrom, error::Error, future::Future, pin::Pin};
+use std::{convert::TryFrom, future::Future, pin::Pin};
 
 use super::error::MarsError;
 
 use super::config::ServiceConfig;
-use super::project::ProxyService;
-use async_trait::async_trait;
+
 use http::{header::InvalidHeaderValue, HeaderValue, Request, Response};
-use hyper::{client::HttpConnector, Body, Client};
+use hyper::{client::HttpConnector, Client};
 use hyper_tls::HttpsConnector;
 use tower::{Layer, Service, ServiceBuilder};
 
@@ -76,39 +75,12 @@ where
     }
 }
 
-#[async_trait]
-impl ProxyService for BasicAuth<hyper::Client<HttpsConnector<HttpConnector>>> {
-    async fn handle_service(
-        &mut self,
-        url: &str,
-        service_config: &ServiceConfig,
-        request: hyper::Request<Body>,
-    ) -> Result<Response<Body>, Box<dyn Error>> {
-        let mut request = request;
-        service_config.get_updated_request(url, &mut request)?;
-        let response = self.call(request).await?;
-        Ok(response)
-    }
-}
-
 impl TryFrom<&ServiceConfig> for BasicAuthLayer {
     type Error = MarsError;
 
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let username = value
-            .handler
-            .params
-            .get("username")
-            .ok_or(MarsError::ServiceConfigError)?
-            .as_str()
-            .ok_or(MarsError::ServiceConfigError)?;
-        let password = value
-            .handler
-            .params
-            .get("password")
-            .ok_or(MarsError::ServiceConfigError)?
-            .as_str()
-            .ok_or(MarsError::ServiceConfigError)?;
+        let username = value.get_handler_config("username")?;
+        let password = value.get_handler_config("password")?;
         let basic_auth_layer = BasicAuthLayer::from_username_n_password(username, password)
             .map_err(|_| MarsError::ServiceConfigError)?;
         Ok(basic_auth_layer)

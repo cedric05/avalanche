@@ -5,8 +5,10 @@ pub(crate) mod error;
 pub(crate) mod headerauth;
 pub(crate) mod project;
 pub(crate) mod simple;
+pub(crate) mod x509;
+
+#[macro_use]
 pub(crate) mod utils;
-pub mod x509;
 
 use std::{convert::Infallible, sync::Arc};
 

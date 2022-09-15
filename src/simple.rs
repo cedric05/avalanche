@@ -56,6 +56,7 @@ impl ProjectHandler for SimpleProjectHandler {
         let project = url_split.next().ok_or(MarsError::UrlError)?;
         let service = url_split.next().ok_or(MarsError::UrlError)?;
         let rest = url_split.next().unwrap_or("");
+        // TODO, service has not extra backslash ('/'), service contains `?` also, which messes up everything
         if self.projects.contains_key(project) {
             let get_mut = self.projects.get_mut(project);
             let project = get_mut.ok_or(MarsError::ServiceConfigError)?;

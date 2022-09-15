@@ -1,15 +1,13 @@
-use std::{error::Error, future::Future, pin::Pin, str::FromStr};
+use std::{future::Future, pin::Pin, str::FromStr};
 
 use crate::error::MarsError;
 
 use super::config::ServiceConfig;
-use super::project::ProxyService;
-use async_trait::async_trait;
 use http::{
     header::{HeaderName, InvalidHeaderValue},
     HeaderValue, Request, Response,
 };
-use hyper::{client::HttpConnector, Body, Client};
+use hyper::{client::HttpConnector, Client};
 use hyper_tls::HttpsConnector;
 use tower::{Layer, Service, ServiceBuilder};
 
@@ -79,39 +77,12 @@ where
     }
 }
 
-#[async_trait]
-impl ProxyService for HeaderAuth<hyper::Client<HttpsConnector<HttpConnector>>> {
-    async fn handle_service(
-        &mut self,
-        url: &str,
-        service_config: &ServiceConfig,
-        request: hyper::Request<Body>,
-    ) -> Result<Response<Body>, Box<dyn Error>> {
-        let mut request = request;
-        service_config.get_updated_request(url, &mut request)?;
-        let response = self.call(request).await?;
-        Ok(response)
-    }
-}
-
 impl TryFrom<&ServiceConfig> for HeaderAuthLayer {
     type Error = MarsError;
 
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let key = value
-            .handler
-            .params
-            .get("key")
-            .ok_or(MarsError::ServiceConfigError)?
-            .as_str()
-            .ok_or(MarsError::ServiceConfigError)?;
-        let value = value
-            .handler
-            .params
-            .get("value")
-            .ok_or(MarsError::ServiceConfigError)?
-            .as_str()
-            .ok_or(MarsError::ServiceConfigError)?;
+        let key = value.get_handler_config("key")?;
+        let value = value.get_handler_config("value")?;
         let header_auth_layer =
             HeaderAuthLayer::from_header(key, value).map_err(|_| MarsError::ServiceConfigError)?;
         Ok(header_auth_layer)

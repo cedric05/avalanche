@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use url::Url;
 
+use crate::error::MarsError;
+
 #[allow(unused)]
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum Action {
@@ -86,6 +88,15 @@ lazy_static::lazy_static! {
     ];
 }
 impl ServiceConfig {
+    pub fn get_handler_config(&self, key: &str) -> Result<&str, MarsError> {
+        self.handler
+            .params
+            .get(key)
+            .ok_or(MarsError::ServiceConfigError)?
+            .as_str()
+            .ok_or(MarsError::ServiceConfigError)
+    }
+
     pub fn get_updated_request(
         &self,
         rest: &str,

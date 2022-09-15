@@ -1,23 +1,20 @@
-use std::error::Error;
 use std::future::Future;
 use std::pin::Pin;
 use std::time::SystemTime;
 
-use async_trait::async_trait;
 use aws_sigv4::http_request::{sign, SignableBody, SignableRequest};
 use aws_sigv4::{http_request::SigningSettings, signing_params::Builder as SignparamsBuilder};
 
 use http::{Request, Response};
 use hyper::client::HttpConnector;
 
-use hyper::{body, Body, Client};
+use hyper::{body, Client};
 use hyper_tls::HttpsConnector;
 
 use tower::{Layer, Service, ServiceBuilder};
 
 use crate::config::ServiceConfig;
 use crate::error::MarsError;
-use crate::project::ProxyService;
 
 #[derive(Clone)]
 pub struct AwsAuth<S> {
@@ -116,10 +113,10 @@ impl TryFrom<&ServiceConfig> for AwsAuthLayer {
     type Error = MarsError;
 
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let access_key = get_param(value, "access_key")?;
-        let secret_key = get_param(value, "secret_key")?;
-        let region = get_param(value, "region")?;
-        let service = get_param(value, "service")?;
+        let access_key = value.get_handler_config("access_key")?;
+        let secret_key = value.get_handler_config("secret_key")?;
+        let region = value.get_handler_config("region")?;
+        let service = value.get_handler_config("service")?;
         let aws_auth_layer = AwsAuthLayer {
             access_key: access_key.to_string(),
             secret_key: secret_key.to_string(),
@@ -128,17 +125,6 @@ impl TryFrom<&ServiceConfig> for AwsAuthLayer {
         };
         Ok(aws_auth_layer)
     }
-}
-
-fn get_param<'a>(value: &'a ServiceConfig, key: &'a str) -> Result<&'a str, MarsError> {
-    let username = value
-        .handler
-        .params
-        .get(key)
-        .ok_or(MarsError::ServiceConfigError)?
-        .as_str()
-        .ok_or(MarsError::ServiceConfigError)?;
-    Ok(username)
 }
 
 impl TryFrom<&ServiceConfig> for AwsAuth<Client<HttpsConnector<HttpConnector>>> {
@@ -150,21 +136,6 @@ impl TryFrom<&ServiceConfig> for AwsAuth<Client<HttpsConnector<HttpConnector>>> 
         let auth_layer = AwsAuthLayer::try_from(value)?;
         let res = ServiceBuilder::new().layer(auth_layer).service(client);
         Ok(res)
-    }
-}
-
-#[async_trait]
-impl ProxyService for AwsAuth<hyper::Client<HttpsConnector<HttpConnector>>> {
-    async fn handle_service(
-        &mut self,
-        url: &str,
-        service_config: &ServiceConfig,
-        request: hyper::Request<Body>,
-    ) -> Result<Response<Body>, Box<dyn Error>> {
-        let mut request = request;
-        service_config.get_updated_request(url, &mut request)?;
-        let response = self.call(request).await?;
-        Ok(response)
     }
 }
 
