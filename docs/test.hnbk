@@ -27,7 +27,8 @@
   language: dothttp-vscode
   value: |-
     @name('header auth'): "base"
-    GET '/sample2/get'
+    GET '/sample2'
+    ? 'ram' = ranga
     json({
         "hai": "bye"
     })
@@ -52,4 +53,16 @@
 
     @name('ssl'): "base"
     GET '/ssl'
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |-
+    @name('delay'): "base"
+    POST '/delay/10'
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |-
+    @name('delay2'): "base"
+    POST '/delay/10'
   outputs: []

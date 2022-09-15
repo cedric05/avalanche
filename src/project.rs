@@ -31,7 +31,7 @@ clone_trait_object!(Project);
 #[async_trait]
 pub trait ProjectHandler {
     async fn handle_request(
-        &mut self,
+        &self,
         request: hyper::Request<Body>,
     ) -> Result<Response<Body>, Box<dyn Error>>;
 }

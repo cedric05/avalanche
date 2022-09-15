@@ -21,10 +21,9 @@ pub use simple::simple_project_handler;
 
 pub async fn main_service(
     request: Request<Body>,
-    project_handler: Arc<tokio::sync::Mutex<SimpleProjectHandler>>,
+    project_handler: Arc<SimpleProjectHandler>,
 ) -> Result<Response<Body>, Infallible> {
-    let mut simple_project_handler = project_handler.try_lock().unwrap();
-    let handle_request = simple_project_handler.handle_request(request);
+    let handle_request = project_handler.handle_request(request);
     match handle_request.await {
         Ok(result) => Ok(result),
         Err(error) => {
