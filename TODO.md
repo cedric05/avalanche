@@ -20,6 +20,15 @@
 - [ ] soap x503 authentication
 - [ ] hawk auth
 - [ ] oauth
+- [ ] jwt auth
+
+# TODO Client settings
+- [ ] Set limits on client
+  - [ ] Timeout
+  - [ ] Rate limits
+  - [ ] Rate limit per User
+- [ ] Discard client if not used for last couple of hours (lower memory)
+- [ ] Use database instead of settings
 
 # TODO Response
 - [ ] remove few headers from response

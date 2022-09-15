@@ -2,24 +2,8 @@ use std::convert::Infallible;
 use std::sync::Arc;
 
 use hyper::service::{make_service_fn, service_fn};
-use hyper::{Body, Request, Response, Server};
-use mars_rover::project::ProjectHandler;
-use mars_rover::simple::{simple_project_handler, SimpleProjectHandler};
-
-async fn main_service(
-    request: Request<Body>,
-    project_handler: Arc<tokio::sync::Mutex<SimpleProjectHandler>>,
-) -> Result<Response<Body>, Infallible> {
-    let mut simple_project_handler = project_handler.try_lock().unwrap();
-    let handle_request = simple_project_handler.handle_request(request);
-    match handle_request.await {
-        Ok(result) => Ok(result),
-        Err(error) => {
-            println!("error is {:?}", error);
-            Ok(Response::builder().status(500).body(Body::empty()).unwrap())
-        }
-    }
-}
+use hyper::Server;
+use mars_rover::{main_service, simple_project_handler};
 
 #[tokio::main]
 pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
