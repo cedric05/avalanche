@@ -5,7 +5,7 @@ use crate::error::MarsError;
 use super::config::ServiceConfig;
 use http::{
     header::{HeaderName, InvalidHeaderValue},
-    HeaderValue, Request, Response,
+    HeaderMap, HeaderValue, Request, Response,
 };
 use hyper::{client::HttpConnector, Client};
 use hyper_tls::HttpsConnector;
@@ -13,20 +13,18 @@ use tower::{Layer, Service, ServiceBuilder};
 
 #[derive(Clone)]
 pub struct HeaderAuth<S> {
-    key: HeaderName,
-    value: HeaderValue,
+    header_map: HeaderMap<HeaderValue>,
     pub inner: S,
 }
 
 pub struct HeaderAuthLayer {
-    key: HeaderName,
-    value: HeaderValue,
+    header_map: HeaderMap<HeaderValue>,
 }
 
 #[allow(unused)]
 impl HeaderAuthLayer {
-    pub fn new(key: HeaderName, value: HeaderValue) -> Self {
-        HeaderAuthLayer { key, value }
+    pub fn new(header_map: HeaderMap<HeaderValue>) -> Self {
+        HeaderAuthLayer { header_map }
     }
 }
 
@@ -35,8 +33,7 @@ impl<S> Layer<S> for HeaderAuthLayer {
 
     fn layer(&self, inner: S) -> Self::Service {
         HeaderAuth {
-            key: self.key.clone(),
-            value: self.value.clone(),
+            header_map: self.header_map.clone(),
             inner: inner,
         }
     }
@@ -44,10 +41,10 @@ impl<S> Layer<S> for HeaderAuthLayer {
 
 #[allow(unused)]
 impl HeaderAuthLayer {
-    pub fn from_header(key: &str, value: &str) -> Result<HeaderAuthLayer, InvalidHeaderValue> {
-        let key = HeaderName::from_str(key).unwrap();
-        let value = HeaderValue::from_str(value).unwrap();
-        Ok(HeaderAuthLayer::new(key, value))
+    pub fn from_header(
+        header_map: HeaderMap<HeaderValue>,
+    ) -> Result<HeaderAuthLayer, InvalidHeaderValue> {
+        Ok(HeaderAuthLayer::new(header_map))
     }
 }
 
@@ -70,8 +67,7 @@ where
 
     fn call(&mut self, req: Request<ReqBody>) -> Self::Future {
         let mut req = req;
-        req.headers_mut()
-            .append(self.key.clone(), self.value.clone());
+        req.headers_mut().extend(self.header_map.clone());
         let fut = self.inner.call(req);
         Box::pin(async move { fut.await })
     }
@@ -81,10 +77,34 @@ impl TryFrom<&ServiceConfig> for HeaderAuthLayer {
     type Error = MarsError;
 
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let key = value.get_handler_config("key")?;
-        let value = value.get_handler_config("value")?;
+        let mut header_map = HeaderMap::new();
+        for header_pair in value
+            .handler
+            .params
+            .as_array()
+            .ok_or(MarsError::ServiceConfigError)?
+        {
+            let pair = header_pair
+                .as_object()
+                .ok_or(MarsError::ServiceConfigError)?;
+            let value = pair
+                .get("key")
+                .ok_or(MarsError::ServiceConfigError)?
+                .as_str()
+                .ok_or(MarsError::ServiceConfigError)?;
+            let header_key =
+                HeaderName::from_str(value).map_err(|_| MarsError::ServiceConfigError)?;
+            let value = pair
+                .get("value")
+                .ok_or(MarsError::ServiceConfigError)?
+                .as_str()
+                .ok_or(MarsError::ServiceConfigError)?;
+            let header_value =
+                HeaderValue::from_str(value).map_err(|_| MarsError::ServiceConfigError)?;
+            header_map.insert(header_key, header_value);
+        }
         let header_auth_layer =
-            HeaderAuthLayer::from_header(key, value).map_err(|_| MarsError::ServiceConfigError)?;
+            HeaderAuthLayer::from_header(header_map).map_err(|_| MarsError::ServiceConfigError)?;
         Ok(header_auth_layer)
     }
 }

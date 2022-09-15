@@ -43,10 +43,16 @@
                 }
             ],
             "handler": {
-                "params": {
-                    "key": "rama",
-                    "value": "ranga"
-                },
+                "params": [
+                    {
+                        "key": "header_secret_key1",
+                        "value": "header_secret_value1"
+                    },
+                    {
+                        "key": "header_secret_key2",
+                        "value": "header_secret_value2"
+                    }
+                ],
                 "handler_type": "header_auth"
             }
         },
