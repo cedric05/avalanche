@@ -3,6 +3,7 @@ use std::io::Read;
 use std::path::PathBuf;
 use std::{convert::TryFrom, error::Error};
 
+use crate::hawkauth::HawkAuth;
 use crate::x509::SslAuth;
 use crate::{awsauth::AwsAuth, error::MarsError};
 use async_trait::async_trait;
@@ -131,9 +132,18 @@ impl TryFrom<Value> for SimpleProject {
                         SslAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(
                             &service_config,
                         )?;
-                    let aws_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
+                    let ssl_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
                         (service_config, Box::new(ssl_auth_service));
-                    service_map.insert(service_key.to_string(), aws_auth_config);
+                    service_map.insert(service_key.to_string(), ssl_auth_config);
+                }
+                "hawk_auth" => {
+                    let hawk_auth_service =
+                        HawkAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(
+                            &service_config,
+                        )?;
+                    let hawk_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
+                        (service_config, Box::new(hawk_auth_service));
+                    service_map.insert(service_key.to_string(), hawk_auth_config);
                 }
                 _ => {
                     unimplemented!()

@@ -66,3 +66,9 @@
     @name('delay2'): "base"
     POST '/delay/10'
   outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |-
+    @name('hawk'): "base"
+    POST '/hawk/get'
+  outputs: []

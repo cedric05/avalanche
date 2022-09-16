@@ -13,6 +13,7 @@ bytes = "1.2.1"
 clap = { version = "3.2.22", features = ["derive"] }
 dashmap = "5.4.0"
 dyn-clone = "1.0.9"
+hawk = {version = "4.0.0", features = ["use_openssl"], default-features = false}
 http = "0.2.8"
 http-body = "0.4.5"
 hyper = { version = "0.14.20", features = ["full"] }

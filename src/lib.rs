@@ -1,5 +1,6 @@
 pub(crate) mod awsauth;
 pub(crate) mod basicauth;
+pub(crate) mod hawkauth;
 pub mod cli;
 pub(crate) mod config;
 pub(crate) mod error;

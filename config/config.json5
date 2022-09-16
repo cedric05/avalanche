@@ -102,6 +102,20 @@
                 },
                 "handler_type": "basic_auth"
             }
+        },
+        "hawk": {
+            "url": "https://req.dothttp.dev/",
+            "method": "ANY",
+            "query_params": [],
+            "headers": [],
+            "handler": {
+                "params": {
+                    "id": "prasanth",
+                    "key": "password",
+                    "algorithm": "sha256"
+                },
+                "handler_type": "hawk_auth"
+            }
         }
     }
 }
