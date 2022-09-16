@@ -1,6 +1,7 @@
 use std::convert::Infallible;
 use std::sync::Arc;
 
+use clap::Parser;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::Server;
 use mars_rover::{main_service, simple_project_handler};
@@ -9,7 +10,8 @@ use mars_rover::{main_service, simple_project_handler};
 pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // For every connection, we must make a `Service` to handle all
     // incoming HTTP requests on said connection.
-    let project_handler = simple_project_handler()?;
+    let args = mars_rover::cli::Args::parse();
+    let project_handler = simple_project_handler(args.config.into())?;
     let project_handler = Arc::new(project_handler);
     let make_svc = make_service_fn(|_conn| {
         // This is the `Service` that will handle the connection.
@@ -28,7 +30,7 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         }
     });
 
-    let addr = ([127, 0, 0, 1], 3000).into();
+    let addr = ([127, 0, 0, 1], args.port).into();
 
     let server = Server::bind(&addr).serve(make_svc);
 

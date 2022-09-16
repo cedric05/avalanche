@@ -30,6 +30,7 @@
             "method": "ANY",
             "query_params": [
                 {
+                    // some common query params
                     "key": "test",
                     "value": "test",
                     "action": "Add"
@@ -37,6 +38,7 @@
             ],
             "headers": [
                 {
+                    // some common headers
                     "key": "test",
                     "value": "test",
                     "action": "Add"
@@ -45,11 +47,15 @@
             "handler": {
                 "params": [
                     {
+                        // header key
                         "key": "header_secret_key1",
+                        // header value
                         "value": "header_secret_value1"
                     },
                     {
+                        // header key
                         "key": "header_secret_key2",
+                        // header value
                         "value": "header_secret_value2"
                     }
                 ],

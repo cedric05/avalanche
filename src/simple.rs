@@ -1,5 +1,6 @@
 use std::fs;
-use std::io::BufReader;
+use std::io::Read;
+use std::path::PathBuf;
 use std::{convert::TryFrom, error::Error};
 
 use crate::x509::SslAuth;
@@ -161,9 +162,11 @@ impl TryFrom<Value> for SimpleProjectHandler {
     }
 }
 
-pub fn simple_project_handler() -> Result<SimpleProjectHandler, MarsError> {
-    let file = fs::File::open("config/config.json").unwrap();
-    let reader = BufReader::new(file);
-    let value: Result<Value, serde_json::Error> = serde_json::from_reader(reader);
-    SimpleProjectHandler::try_from(value.unwrap())
+pub fn simple_project_handler(path: PathBuf) -> Result<SimpleProjectHandler, MarsError> {
+    let mut file = fs::File::open(path).map_err(|_| MarsError::ServiceConfigError)?;
+    let mut config = String::new();
+    file.read_to_string(&mut config)
+        .map_err(|_| MarsError::ServiceConfigError)?;
+    let value: Value = json5::from_str(&config).map_err(|_| MarsError::ServiceConfigError)?;
+    SimpleProjectHandler::try_from(value)
 }
