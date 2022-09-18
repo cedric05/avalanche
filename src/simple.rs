@@ -3,6 +3,7 @@ use std::io::Read;
 use std::path::PathBuf;
 use std::{convert::TryFrom, error::Error};
 
+use crate::digestauth::DigestAuth;
 use crate::hawkauth::HawkAuth;
 use crate::x509::SslAuth;
 use crate::{awsauth::AwsAuth, error::MarsError};
@@ -144,6 +145,15 @@ impl TryFrom<Value> for SimpleProject {
                     let hawk_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
                         (service_config, Box::new(hawk_auth_service));
                     service_map.insert(service_key.to_string(), hawk_auth_config);
+                }
+                "digest_auth" => {
+                    let digest_auth_service =
+                        DigestAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(
+                            &service_config,
+                        )?;
+                    let digest_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
+                        (service_config, Box::new(digest_auth_service));
+                    service_map.insert(service_key.to_string(), digest_auth_config);
                 }
                 _ => {
                     unimplemented!()

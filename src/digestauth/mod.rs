@@ -1,0 +1,144 @@
+use super::config::ServiceConfig;
+use crate::error::MarsError;
+use digest_auth::{AuthContext, HttpMethod};
+use http::{HeaderValue, Request, Response};
+use hyper::{body, client::HttpConnector, Client};
+use hyper_tls::HttpsConnector;
+use std::{future::Future, pin::Pin};
+use tower::{Layer, Service, ServiceBuilder};
+
+// Credentials is not cloneable
+#[derive(Clone)]
+pub struct DigestAuth<S> {
+    username: String,
+    password: String,
+    pub inner: S,
+}
+
+pub struct DigestAuthLayer {
+    username: String,
+    password: String,
+}
+
+#[allow(unused)]
+impl DigestAuthLayer {}
+
+impl<S> Layer<S> for DigestAuthLayer {
+    type Service = DigestAuth<S>;
+
+    fn layer(&self, inner: S) -> Self::Service {
+        DigestAuth {
+            username: self.username.clone(),
+            password: self.password.clone(),
+            inner: inner,
+        }
+    }
+}
+
+type ResBody = hyper::Body;
+type ReqBody = hyper::Body;
+type HyperError = hyper::Error;
+impl<S> Service<Request<ReqBody>> for DigestAuth<S>
+where
+    S: Service<Request<ReqBody>, Response = Response<ResBody>, Error = HyperError>
+        + Send
+        + 'static
+        + Clone,
+    S::Future: 'static,
+    <S as Service<Request<ReqBody>>>::Future: Send,
+{
+    type Response = S::Response;
+    type Error = S::Error;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+
+    fn poll_ready(
+        &mut self,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(cx)
+    }
+
+    fn call(&mut self, req: Request<ReqBody>) -> Self::Future {
+        let mut original = self.inner.clone();
+        let (parts, body) = req.into_parts();
+        let username = self.username.clone();
+        let password = self.password.clone();
+        Box::pin(async move {
+            let uri = parts.uri.path_and_query().unwrap().to_string();
+            let body = body::to_bytes(hyper::body::Body::from(body))
+                .await
+                .unwrap()
+                .to_vec();
+            let signable = Request::builder()
+                .method(parts.method.clone())
+                .uri(parts.uri.clone())
+                .version(parts.version)
+                .body(hyper::body::Body::from(body.clone()))
+                .unwrap();
+
+            let call = original.call(signable).await.unwrap();
+            if call.status() == 401 {
+                let method = parts.method.to_string();
+                let method = match method.as_str() {
+                    "OPTIONS" => HttpMethod::OPTIONS,
+                    "GET" => HttpMethod::GET,
+                    "POST" => HttpMethod::POST,
+                    "PUT" => HttpMethod::PUT,
+                    "DELETE" => HttpMethod::DELETE,
+                    "HEAD" => HttpMethod::HEAD,
+                    "TRACE" => HttpMethod::TRACE,
+                    "CONNECT" => HttpMethod::CONNECT,
+                    "PATCH" => HttpMethod::PATCH,
+                    _ => HttpMethod::GET,
+                };
+                let context = AuthContext::new_with_method(
+                    username,
+                    password,
+                    uri,
+                    Some(body.clone()),
+                    method,
+                );
+                let www_authenticate = call
+                    .headers()
+                    .get("WWW-Authenticate")
+                    .unwrap()
+                    .to_str()
+                    .unwrap();
+                let mut prompt = digest_auth::parse(www_authenticate).unwrap();
+                let answer = prompt.respond(&context).unwrap().to_string();
+                let mut req2 = Request::from_parts(parts, hyper::body::Body::from(body.clone()));
+                req2.headers_mut()
+                    .insert("Authorization", HeaderValue::from_str(&answer).unwrap());
+                println!("headers is {:?}", req2.headers());
+                original.call(req2).await
+            } else {
+                Ok(Response::new(hyper::Body::empty()))
+            }
+        })
+    }
+}
+
+impl TryFrom<&ServiceConfig> for DigestAuthLayer {
+    type Error = MarsError;
+
+    fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
+        let username = value.get_handler_config("username")?;
+        let password = value.get_handler_config("password")?;
+        Ok(DigestAuthLayer {
+            username: username.to_string(),
+            password: password.to_string(),
+        })
+    }
+}
+
+impl TryFrom<&ServiceConfig> for DigestAuth<Client<HttpsConnector<HttpConnector>>> {
+    type Error = MarsError;
+
+    fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
+        let https = HttpsConnector::new();
+        let client = Client::builder().build::<_, hyper::Body>(https);
+        let auth_layer = DigestAuthLayer::try_from(value)?;
+        let res = ServiceBuilder::new().layer(auth_layer).service(client);
+        Ok(res)
+    }
+}

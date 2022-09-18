@@ -79,5 +79,7 @@
   outputs: []
 - kind: 2
   language: dothttp-vscode
-  value: 'GET http://postman-echo.com/auth/hawk'
+  value: |-
+    @name('digest'): "base"
+    GET /digest
   outputs: []

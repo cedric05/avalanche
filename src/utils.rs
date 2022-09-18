@@ -1,6 +1,7 @@
 use crate::awsauth::AwsAuth;
 use crate::basicauth::BasicAuth;
 use crate::config::ServiceConfig;
+use crate::digestauth::DigestAuth;
 use crate::hawkauth::HawkAuth;
 use crate::headerauth::HeaderAuth;
 use crate::project::ProxyService;
@@ -32,3 +33,4 @@ impl_proxy_service!(SslAuth);
 impl_proxy_service!(BasicAuth);
 impl_proxy_service!(AwsAuth);
 impl_proxy_service!(HawkAuth);
+impl_proxy_service!(DigestAuth);

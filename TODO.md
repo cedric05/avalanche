@@ -13,7 +13,7 @@
 - [x] Basic Auth
 - [x] Header Auth
 - [x] Aws auth (https://github.com/awslabs/aws-sdk-rust/blob/main/sdk/aws-sig-auth/src/lib.rs)
-- [ ] digest auth???
+- [x] digest auth???
 - [x] save header information safely
 - [x] x503 authentication
 - [ ] soap basic authentication

@@ -116,6 +116,19 @@
                 },
                 "handler_type": "hawk_auth"
             }
+        },
+        "digest": {
+            "url": "https://postman-echo.com/digest-auth",
+            "method": "ANY",
+            "query_params": [],
+            "headers": [],
+            "handler": {
+                "params": {
+                    "username": "postman",
+                    "password": "password"
+                },
+                "handler_type": "digest_auth"
+            }
         }
     }
 }
