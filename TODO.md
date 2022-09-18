@@ -18,7 +18,7 @@
 - [x] x503 authentication
 - [ ] soap basic authentication
 - [ ] soap x503 authentication
-- [ ] hawk auth
+- [x] hawk auth
 - [ ] oauth
 - [ ] jwt auth
 

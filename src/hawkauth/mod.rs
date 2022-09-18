@@ -8,6 +8,7 @@ use http::{HeaderValue, Request, Response};
 use hyper::{client::HttpConnector, Client};
 use hyper_tls::HttpsConnector;
 use tower::{Layer, Service, ServiceBuilder};
+use url::Url;
 
 // Credentials is not cloneable
 #[derive(Clone)]
@@ -62,25 +63,15 @@ where
             id: self.id.clone(),
             key: Key::new(self.key.clone(), self.algorithm).unwrap(),
         };
-        let method = req.method().as_str();
-        let host = req.uri().host().unwrap();
-        let port = match (req.uri().port(), req.uri().scheme()) {
-            (Some(port), _) => port.as_u16(),
-            (None, Some(scheme)) => {
-                let scheme = scheme.as_str();
-                if scheme == "https" {
-                    443
-                } else {
-                    80
-                }
-            }
-            (None, None) => 80,
-        };
-        let path = req.uri().path();
-        let client_req = RequestBuilder::new(method, host, port, path).request();
+        let url = Url::parse(&req.uri().to_string()).unwrap();
+        let client_req = RequestBuilder::from_url(&req.method().as_str(), &url)
+            .unwrap()
+            .request();
         let header = client_req.make_header(&credentials).unwrap();
-        let val = HeaderValue::from_str(header.to_string().as_str()).unwrap();
-        req.headers_mut().insert("Authentication", val);
+        req.headers_mut().insert(
+            "Authorization",
+            HeaderValue::from_str(&format!("Hawk {}", header.to_string())).unwrap(),
+        );
         let fut = self.inner.call(req);
         Box::pin(async move { fut.await })
     }

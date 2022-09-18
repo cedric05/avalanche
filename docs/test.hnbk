@@ -70,5 +70,14 @@
   language: dothttp-vscode
   value: |-
     @name('hawk'): "base"
-    POST '/hawk/get'
+    GET '/hawk/'
+
+    // Hawk id="dh37fgj492je", 
+    // ts="1663490185", 
+    // nonce="No6gJr", 
+    // mac="YvltPluPGVoCFIyQWCg+qm2rRWi3mPRnGWl5dxkExlI="
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: 'GET http://postman-echo.com/auth/hawk'
   outputs: []
