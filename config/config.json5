@@ -129,6 +129,16 @@
                 },
                 "handler_type": "digest_auth"
             }
+        },
+        "noauth": {
+            "url": "https://httpbin.org/",
+            "method": "ANY",
+            "query_params": [],
+            "headers": [],
+            "handler": {
+                "params":{},
+                "handler_type": "no_auth"
+            }
         }
     }
 }

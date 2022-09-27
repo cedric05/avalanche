@@ -1,13 +1,19 @@
+#[cfg(feature = "awsauth")]
 pub(crate) mod awsauth;
+#[cfg(feature = "basicauth")]
 pub(crate) mod basicauth;
-pub(crate) mod hawkauth;
 pub mod cli;
 pub(crate) mod config;
-pub(crate) mod error;
-pub(crate) mod headerauth;
+#[cfg(feature = "digestauth")]
 pub(crate) mod digestauth;
+pub(crate) mod error;
+#[cfg(feature = "hawkauth")]
+pub(crate) mod hawkauth;
+pub(crate) mod headerauth;
+pub(crate) mod noauth;
 pub(crate) mod project;
 pub(crate) mod simple;
+#[cfg(feature = "x509auth")]
 pub(crate) mod x509;
 #[macro_use]
 pub(crate) mod utils;

@@ -7,21 +7,23 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1.57"
-aws-sigv4 = "0.48.0"
-base64 = "0.13.0"
+aws-sigv4 = {version = "0.48.0", optional = true}
+base64 = {version = "0.13.0",optional = true}
 bytes = "1.2.1"
 clap = { version = "3.2.22", features = ["derive"] }
 dashmap = "5.4.0"
-digest_auth = "0.3.0"
+digest_auth={version = "0.3.0",optional = true}
 dyn-clone = "1.0.9"
-hawk = {version = "4.0.0", features = ["use_openssl"], default-features = false}
+hawk = { version = "4.0.0", features = [
+    "use_openssl",
+], default-features = false, optional = true}
 http = "0.2.8"
 http-body = "0.4.5"
 hyper = { version = "0.14.20", features = ["full"] }
 hyper-tls = "0.5.0"
 json5 = "0.4.1"
 lazy_static = "1.4.0"
-native-tls = "0.2.10"
+native-tls ={version = "0.2.10", optional = true}
 pin-project = "1.0.12"
 regex = "1.6.0"
 serde = { version = "1.0.144", features = ["derive"] }
@@ -35,3 +37,12 @@ tower-http = { version = "0.3.4", features = [
     "set-header",
 ] }
 url = "2.2.2"
+
+
+[features]
+awsauth = ["aws-sigv4"]
+hawkauth = ["hawk"]
+x509auth = ["native-tls"]
+digestauth = ["digest_auth"]
+basicauth=["base64"]
+default = ["awsauth", "hawkauth", "x509auth","digestauth", "basicauth"]

@@ -21,6 +21,8 @@
 - [x] hawk auth
 - [ ] oauth
 - [ ] jwt auth
+- [ ] NTLM
+- [x] No auth
 
 # TODO Client settings
 - [ ] Set limits on client

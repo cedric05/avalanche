@@ -66,8 +66,7 @@ where
         Box::pin(async move {
             let uri = parts.uri.path_and_query().unwrap().to_string();
             let body = body::to_bytes(hyper::body::Body::from(body))
-                .await
-                .unwrap()
+                .await?
                 .to_vec();
             let signable = Request::builder()
                 .method(parts.method.clone())
@@ -76,8 +75,8 @@ where
                 .body(hyper::body::Body::from(body.clone()))
                 .unwrap();
 
-            let call = original.call(signable).await.unwrap();
-            if call.status() == 401 {
+            let initial_request = original.call(signable).await.unwrap();
+            if initial_request.status() == 401 {
                 let method = parts.method.to_string();
                 let method = match method.as_str() {
                     "OPTIONS" => HttpMethod::OPTIONS,
@@ -91,26 +90,27 @@ where
                     "PATCH" => HttpMethod::PATCH,
                     _ => HttpMethod::GET,
                 };
-                let context = AuthContext::new_with_method(
+                let digest_context = AuthContext::new_with_method(
                     username,
                     password,
                     uri,
                     Some(body.clone()),
                     method,
                 );
-                let www_authenticate = call
+                let www_authenticate = initial_request
                     .headers()
                     .get("WWW-Authenticate")
                     .unwrap()
                     .to_str()
                     .unwrap();
                 let mut prompt = digest_auth::parse(www_authenticate).unwrap();
-                let answer = prompt.respond(&context).unwrap().to_string();
-                let mut req2 = Request::from_parts(parts, hyper::body::Body::from(body.clone()));
-                req2.headers_mut()
+                let answer = prompt.respond(&digest_context).unwrap().to_string();
+                let mut rebuilt_request =
+                    Request::from_parts(parts, hyper::body::Body::from(body.clone()));
+                rebuilt_request
+                    .headers_mut()
                     .insert("Authorization", HeaderValue::from_str(&answer).unwrap());
-                println!("headers is {:?}", req2.headers());
-                original.call(req2).await
+                original.call(rebuilt_request).await
             } else {
                 Ok(Response::new(hyper::Body::empty()))
             }

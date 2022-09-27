@@ -4,8 +4,12 @@ use std::path::PathBuf;
 use std::{convert::TryFrom, error::Error};
 
 use crate::digestauth::DigestAuth;
+#[cfg(feature = "hawkauth")]
 use crate::hawkauth::HawkAuth;
+use crate::noauth::NoAuth;
+#[cfg(feature = "x509auth")]
 use crate::x509::SslAuth;
+#[cfg(feature = "awsauth")]
 use crate::{awsauth::AwsAuth, error::MarsError};
 use async_trait::async_trait;
 use dashmap::{mapref::one::RefMut, DashMap};
@@ -101,6 +105,7 @@ impl TryFrom<Value> for SimpleProject {
             let service_config: ServiceConfig = serde_json::from_value(service_config)
                 .map_err(|_| MarsError::ServiceConfigError)?;
             match service_config.handler.handler_type.as_str() {
+                #[cfg(feature = "basicauth")]
                 "basic_auth" => {
                     let basic_auth_service =
                         BasicAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(
@@ -119,6 +124,7 @@ impl TryFrom<Value> for SimpleProject {
                         (service_config, Box::new(header_auth_service));
                     service_map.insert(service_key.to_string(), header_auth_config);
                 }
+                #[cfg(feature = "awsauth")]
                 "aws_auth" => {
                     let aws_auth_service =
                         AwsAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(
@@ -128,6 +134,7 @@ impl TryFrom<Value> for SimpleProject {
                         (service_config, Box::new(aws_auth_service));
                     service_map.insert(service_key.to_string(), aws_auth_config);
                 }
+                #[cfg(feature = "x509auth")]
                 "x509" => {
                     let ssl_auth_service =
                         SslAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(
@@ -137,6 +144,7 @@ impl TryFrom<Value> for SimpleProject {
                         (service_config, Box::new(ssl_auth_service));
                     service_map.insert(service_key.to_string(), ssl_auth_config);
                 }
+                #[cfg(feature = "hawkauth")]
                 "hawk_auth" => {
                     let hawk_auth_service =
                         HawkAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(
@@ -146,6 +154,7 @@ impl TryFrom<Value> for SimpleProject {
                         (service_config, Box::new(hawk_auth_service));
                     service_map.insert(service_key.to_string(), hawk_auth_config);
                 }
+                #[cfg(feature = "digestauth")]
                 "digest_auth" => {
                     let digest_auth_service =
                         DigestAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(
@@ -154,6 +163,13 @@ impl TryFrom<Value> for SimpleProject {
                     let digest_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
                         (service_config, Box::new(digest_auth_service));
                     service_map.insert(service_key.to_string(), digest_auth_config);
+                }
+                "no_auth" => {
+                    let no_auth_service =
+                        NoAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(&service_config)?;
+                    let no_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
+                        (service_config, Box::new(no_auth_service));
+                    service_map.insert(service_key.to_string(), no_auth_config);
                 }
                 _ => {
                     unimplemented!()

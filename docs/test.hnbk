@@ -83,3 +83,9 @@
     @name('digest'): "base"
     GET /digest
   outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |-
+    @name('noauth'): "base"
+    GET /noauth/get
+  outputs: []
