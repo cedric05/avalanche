@@ -1,7 +1,6 @@
 
 # TODO multi
 - [x] single path or multiple path (prefer multipath)
-- [ ] dynamic configuration
 
 # TODO Request
 - [x] Url query params forwarding with custom params
@@ -11,6 +10,7 @@
 - [ ] provide stats on which api is called and how many times (promotheues)
 
 # TODO Request  AUTH
+- [x] dynamic load services for clients on service_config
 - [x] Basic Auth
 - [x] Header Auth
 - [x] Aws auth (https://github.com/awslabs/aws-sdk-rust/blob/main/sdk/aws-sig-auth/src/lib.rs)

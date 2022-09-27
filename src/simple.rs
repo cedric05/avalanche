@@ -1,25 +1,28 @@
-use std::fs;
-use std::io::Read;
-use std::path::PathBuf;
-use std::{convert::TryFrom, error::Error};
-
+#[cfg(feature = "awsauth")]
+use crate::awsauth::AwsAuth;
+#[cfg(feature = "digestauth")]
 use crate::digestauth::DigestAuth;
+use crate::error::MarsError;
 #[cfg(feature = "hawkauth")]
 use crate::hawkauth::HawkAuth;
 use crate::noauth::NoAuth;
 #[cfg(feature = "x509auth")]
 use crate::x509::SslAuth;
-#[cfg(feature = "awsauth")]
-use crate::{awsauth::AwsAuth, error::MarsError};
 use async_trait::async_trait;
 use dashmap::{mapref::one::RefMut, DashMap};
 use http::Response;
 use hyper::{client::HttpConnector, Body, Client};
 use hyper_tls::HttpsConnector;
 use serde_json::Value;
+use std::collections::HashMap;
+use std::fs;
+use std::io::Read;
+use std::path::PathBuf;
+use std::{convert::TryFrom, error::Error};
 
+#[cfg(feature = "basicauth")]
+use crate::basicauth::BasicAuth;
 use crate::{
-    basicauth::BasicAuth,
     config::ServiceConfig,
     headerauth::HeaderAuth,
     project::{Project, ProjectHandler, ProxyService},
@@ -28,9 +31,9 @@ use crate::{
 #[derive(Clone)]
 struct SimpleProject {
     name: String,
+    service_config_map: HashMap<String, ServiceConfig>,
     services: DashMap<String, (ServiceConfig, Box<dyn ProxyService>)>,
 }
-
 #[async_trait]
 impl Project for SimpleProject {
     async fn is_project(&self, path: &str) -> bool {
@@ -41,7 +44,22 @@ impl Project for SimpleProject {
         &self,
         path: String,
     ) -> Option<RefMut<String, (ServiceConfig, Box<dyn ProxyService>)>> {
-        self.services.get_mut(&path)
+        if self.services.contains_key(&path) {
+            self.services.get_mut(&path)
+        } else {
+            if let Some(config) = self.service_config_map.get(&path) {
+                if let Ok(res) = get_auth_service(config.clone()) {
+                    self.services.insert(path.clone(), res);
+                    self.services.get_mut(&path)
+                } else {
+                    // TODO
+                    // need to handle error scenarios
+                    None
+                }
+            } else {
+                None
+            }
+        }
     }
 }
 
@@ -100,14 +118,15 @@ impl TryFrom<Value> for SimpleProject {
         let value = value.as_object_mut().ok_or(MarsError::ServiceConfigError)?;
 
         let service_map = DashMap::new();
+        let mut service_config_map = HashMap::new();
         for (service_key, service_config_value) in value.into_iter() {
             let service_config = service_config_value.take();
             let service_config: ServiceConfig = serde_json::from_value(service_config)
                 .map_err(|_| MarsError::ServiceConfigError)?;
-            let auth_service = get_auth_service(service_config)?;
-            service_map.insert(service_key.to_string(), auth_service);
+            service_config_map.insert(service_key.to_string(), service_config);
         }
         Ok(SimpleProject {
+            service_config_map,
             name: "no meaning as of now".to_string(),
             services: service_map,
         })
