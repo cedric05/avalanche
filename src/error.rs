@@ -4,6 +4,7 @@ use std::{error::Error, fmt::Display};
 pub enum MarsError {
     UrlError,
     ServiceConfigError,
+    ServiceNotRegistered,
     Error(Box<dyn Error + Sync + Send>),
 }
 
@@ -13,6 +14,7 @@ impl Display for MarsError {
             MarsError::UrlError => f.write_str("urlerror"),
             MarsError::ServiceConfigError => f.write_str("service config error"),
             MarsError::Error(error) => writeln!(f, "dynamic error error {}", error),
+            MarsError::ServiceNotRegistered => writeln!(f, "service not registered error"),
         }
     }
 }

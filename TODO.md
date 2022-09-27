@@ -1,6 +1,7 @@
 
 # TODO multi
 - [x] single path or multiple path (prefer multipath)
+- [ ] dynamic configuration
 
 # TODO Request
 - [x] Url query params forwarding with custom params
