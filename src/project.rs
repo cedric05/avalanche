@@ -8,7 +8,7 @@ use hyper::{service::Service, Body};
 
 use crate::{
     config::ServiceConfig,
-    user::{AuthTokenStoreT, UserStore, UserTokenStoreT},
+    user::{AuthTokenStore, UserStore, UserTokenStore},
 };
 
 /// project
@@ -37,8 +37,8 @@ pub trait ProjectHandler {
         &self,
         request: hyper::Request<Body>,
         user_store: Box<Arc<UserStore>>,
-        user_token_store: Box<Arc<dyn UserTokenStoreT>>,
-        auth_token_store: Box<Arc<dyn AuthTokenStoreT>>,
+        user_token_store: Box<Arc<dyn UserTokenStore>>,
+        auth_token_store: Box<Arc<dyn AuthTokenStore>>,
     ) -> Result<Response<Body>, Box<dyn Error>>;
 }
 

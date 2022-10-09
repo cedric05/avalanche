@@ -16,24 +16,30 @@ pub struct UserStore {
 pub struct AuthToken(pub String);
 
 #[derive(Default)]
-pub struct UserTokenStore {
+pub struct SimpleUserTokenStore {
     pub map: DashMap<AuthToken, User>,
 }
 
 #[derive(Default)]
-pub struct AuthTokensStore {
+pub struct SimpleAuthTokenStore {
     pub project_token: DashMap<AuthToken, String>,
 }
 
-pub trait AuthTokenStoreT: Send + Sync {
+impl SimpleAuthTokenStore {
+    pub fn insert(&self, auth_token: AuthToken, project_key: String) {
+        self.project_token.insert(auth_token, project_key);
+    }
+}
+
+pub trait AuthTokenStore: Send + Sync {
     fn exists(&self, token: &AuthToken, project: &str) -> bool;
 }
 
-pub trait UserTokenStoreT: Send + Sync {
+pub trait UserTokenStore: Send + Sync {
     fn exists(&self, token: &AuthToken) -> bool;
 }
 
-impl AuthTokenStoreT for AuthTokensStore {
+impl AuthTokenStore for SimpleAuthTokenStore {
     fn exists(&self, token: &AuthToken, project: &str) -> bool {
         let allowed_project = self.project_token.get(token);
         if let Some(allowed_project) = allowed_project {
@@ -44,7 +50,7 @@ impl AuthTokenStoreT for AuthTokensStore {
     }
 }
 
-impl UserTokenStoreT for UserTokenStore {
+impl UserTokenStore for SimpleUserTokenStore {
     fn exists(&self, token: &AuthToken) -> bool {
         self.map.contains_key(token)
     }

@@ -26,7 +26,7 @@ use project::ProjectHandler;
 use simple::SimpleProjectHandler;
 
 pub use simple::simple_project_handler;
-use user::{AuthTokenStoreT, UserStore, UserTokenStoreT};
+use user::{AuthTokenStore, UserStore, UserTokenStore};
 
 pub mod user;
 
@@ -34,8 +34,8 @@ pub async fn main_service(
     request: Request<Body>,
     project_handler: Arc<SimpleProjectHandler>,
     user_store: Box<Arc<UserStore>>,
-    user_token_store: Box<Arc<dyn UserTokenStoreT>>,
-    auth_token_store: Box<Arc<dyn AuthTokenStoreT>>,
+    user_token_store: Box<Arc<dyn UserTokenStore>>,
+    auth_token_store: Box<Arc<dyn AuthTokenStore>>,
 ) -> Result<Response<Body>, Infallible> {
     let handle_request =
         project_handler.handle_request(request, user_store, user_token_store, auth_token_store);

@@ -6,7 +6,7 @@ use crate::error::MarsError;
 #[cfg(feature = "hawkauth")]
 use crate::hawkauth::HawkAuth;
 use crate::noauth::NoAuth;
-use crate::user::{AuthToken, AuthTokenStoreT, UserStore, UserTokenStoreT};
+use crate::user::{AuthToken, AuthTokenStore, UserStore, UserTokenStore};
 #[cfg(feature = "x509auth")]
 use crate::x509::SslAuth;
 use async_trait::async_trait;
@@ -78,8 +78,8 @@ impl ProjectHandler for SimpleProjectHandler {
         &self,
         request: hyper::Request<Body>,
         _user_store: Box<Arc<UserStore>>,
-        user_token_store: Box<Arc<dyn UserTokenStoreT>>,
-        auth_token_store: Box<Arc<dyn AuthTokenStoreT>>,
+        user_token_store: Box<Arc<dyn UserTokenStore>>,
+        auth_token_store: Box<Arc<dyn AuthTokenStore>>,
     ) -> Result<Response<Body>, Box<dyn Error>> {
         let uri = request.uri().clone();
         let uri = uri.path_and_query().unwrap().as_str();

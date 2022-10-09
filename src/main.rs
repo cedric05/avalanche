@@ -5,7 +5,8 @@ use clap::Parser;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::Server;
 use mars_rover::user::{
-    AuthToken, AuthTokenStoreT, AuthTokensStore, UserStore, UserTokenStore, UserTokenStoreT,
+    AuthToken, AuthTokenStore, SimpleAuthTokenStore, SimpleUserTokenStore, UserStore,
+    UserTokenStore,
 };
 use mars_rover::{main_service, simple_project_handler};
 
@@ -21,13 +22,11 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let args = mars_rover::cli::Args::parse();
     let project_handler = Arc::new(simple_project_handler(args.config.into())?);
     let user_store: Box<Arc<UserStore>> = conncurrent();
-    let user_token_store: Box<Arc<dyn UserTokenStoreT>> =
-        Box::new(Arc::new(UserTokenStore::default()));
-    let auth_token_store = AuthTokensStore::default();
-    auth_token_store
-        .project_token
-        .insert(AuthToken("hai".to_string()), "first".to_string());
-    let auth_token_store: Box<Arc<dyn AuthTokenStoreT>> = Box::new(Arc::new(auth_token_store));
+    let user_token_store: Box<Arc<dyn UserTokenStore>> =
+        Box::new(Arc::new(SimpleUserTokenStore::default()));
+    let auth_token_store = SimpleAuthTokenStore::default();
+    auth_token_store.insert(AuthToken("hai".to_string()), "first".to_string());
+    let auth_token_store: Box<Arc<dyn AuthTokenStore>> = Box::new(Arc::new(auth_token_store));
 
     let make_svc = make_service_fn(|_conn| {
         // This is the `Service` that will handle the connection.
@@ -43,8 +42,8 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 //
                 let project_handler = Arc::clone(&project_handler);
                 let user_store = user_store.clone();
-                let user_token_store: Box<Arc<dyn UserTokenStoreT>> = user_token_store.clone();
-                let auth_token_store: Box<Arc<dyn AuthTokenStoreT>> = auth_token_store.clone();
+                let user_token_store: Box<Arc<dyn UserTokenStore>> = user_token_store.clone();
+                let auth_token_store: Box<Arc<dyn AuthTokenStore>> = auth_token_store.clone();
                 async move {
                     //
                     main_service(
