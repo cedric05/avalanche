@@ -1,4 +1,4 @@
-use std::{error::Error, future::Future, pin::Pin};
+use std::{error::Error, future::Future, pin::Pin, sync::Arc};
 
 use async_trait::async_trait;
 use dashmap::mapref::one::RefMut;
@@ -6,7 +6,10 @@ use dyn_clone::{clone_trait_object, DynClone};
 use http::{Request, Response};
 use hyper::{service::Service, Body};
 
-use crate::config::ServiceConfig;
+use crate::{
+    config::ServiceConfig,
+    user::{AuthTokenStoreT, UserStore, UserTokenStoreT},
+};
 
 /// project
 /// project has two main variables
@@ -33,6 +36,9 @@ pub trait ProjectHandler {
     async fn handle_request(
         &self,
         request: hyper::Request<Body>,
+        user_store: Box<Arc<UserStore>>,
+        user_token_store: Box<Arc<dyn UserTokenStoreT>>,
+        auth_token_store: Box<Arc<dyn AuthTokenStoreT>>,
     ) -> Result<Response<Body>, Box<dyn Error>>;
 }
 

@@ -3,6 +3,7 @@
   value: |-
     @name('base')
     GET 'http://localhost:3000/first/'
+    "avalanche-token" : "hai"
   outputs: []
 - kind: 2
   language: dothttp-vscode

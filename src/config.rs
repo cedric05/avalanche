@@ -97,6 +97,14 @@ impl ServiceConfig {
             .ok_or(MarsError::ServiceConfigError)
     }
 
+    pub fn get_timeout(&self) -> Option<f64> {
+        self.handler
+            .params
+            .get("timeout")
+            .map(|x| x.as_f64())
+            .flatten()
+    }
+
     pub fn get_updated_request(
         &self,
         rest: &str,

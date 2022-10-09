@@ -6,6 +6,7 @@ use crate::error::MarsError;
 #[cfg(feature = "hawkauth")]
 use crate::hawkauth::HawkAuth;
 use crate::noauth::NoAuth;
+use crate::user::{AuthToken, AuthTokenStoreT, UserStore, UserTokenStoreT};
 #[cfg(feature = "x509auth")]
 use crate::x509::SslAuth;
 use async_trait::async_trait;
@@ -18,6 +19,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::Read;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::{convert::TryFrom, error::Error};
 
 #[cfg(feature = "basicauth")]
@@ -75,12 +77,30 @@ impl ProjectHandler for SimpleProjectHandler {
     async fn handle_request(
         &self,
         request: hyper::Request<Body>,
+        _user_store: Box<Arc<UserStore>>,
+        user_token_store: Box<Arc<dyn UserTokenStoreT>>,
+        auth_token_store: Box<Arc<dyn AuthTokenStoreT>>,
     ) -> Result<Response<Body>, Box<dyn Error>> {
         let uri = request.uri().clone();
         let uri = uri.path_and_query().unwrap().as_str();
         let mut url_split = uri.splitn(4, "/");
         let _host = url_split.next().ok_or(MarsError::UrlError)?;
         let project_key = url_split.next().ok_or(MarsError::UrlError)?;
+
+        let avalanche_token =
+            if let Some(avalanche_token) = request.headers().get("avalanche-token").cloned() {
+                avalanche_token
+            } else {
+                return Ok(Response::builder().status(401).body(Body::empty()).unwrap());
+            };
+        let avalanche_token = String::from_utf8(avalanche_token.as_bytes().to_vec()).unwrap();
+        let avalanche_token = AuthToken(avalanche_token);
+        if !(user_token_store.exists(&avalanche_token)
+            || auth_token_store.exists(&avalanche_token, project_key))
+        {
+            return Ok(Response::builder().status(401).body(Body::empty()).unwrap());
+        }
+
         let service_key = url_split.next().ok_or(MarsError::UrlError)?;
         let (service, url_rest) = if service_key.contains('?') {
             let (service, url_rest) = service_key.split_once('?').unwrap();
