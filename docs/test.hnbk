@@ -3,7 +3,7 @@
   value: |-
     @name('base')
     GET 'http://localhost:3000/first/'
-    "avalanche-token" : "hai"
+    avalanche-token : "hai"
   outputs: []
 - kind: 2
   language: dothttp-vscode
@@ -89,4 +89,14 @@
   value: |-
     @name('noauth'): "base"
     GET /noauth/get
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: 'GET ''https://httpbin.org/get'''
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |
+    GET 'http://localhost:3000/first/cargo/index/config.json'
+    "avalanche-token" : "hai"
   outputs: []

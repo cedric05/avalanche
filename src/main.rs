@@ -17,8 +17,11 @@ fn conncurrent<T: Default>() -> Box<Arc<T>> {
 
 #[tokio::main]
 pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // TODO setup simple console output logger
     // For every connection, we must make a `Service` to handle all
     // incoming HTTP requests on said connection.
+    simple_logger::SimpleLogger::new().init().unwrap();
+
     let args = mars_rover::cli::Args::parse();
     let project_handler = Arc::new(simple_project_handler(args.config.into())?);
     let user_store: Box<Arc<UserStore>> = conncurrent();

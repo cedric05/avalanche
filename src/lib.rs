@@ -18,12 +18,16 @@ pub(crate) mod x509;
 #[macro_use]
 pub(crate) mod utils;
 
-use std::{convert::Infallible, sync::Arc};
+pub(crate) mod auth;
+#[cfg(feature = "sql")]
+pub(crate) mod db;
 
-use http::{Request, Response};
+use std::{convert::Infallible, str::FromStr, sync::Arc};
+
+use http::{header::HeaderName, HeaderValue, Request, Response};
 use hyper::Body;
-use project::ProjectHandler;
-use simple::SimpleProjectHandler;
+use project::ProjectManager;
+use simple::SimpleProjectManager;
 
 pub use simple::simple_project_handler;
 use user::{AuthTokenStore, UserStore, UserTokenStore};
@@ -31,19 +35,32 @@ use user::{AuthTokenStore, UserStore, UserTokenStore};
 pub mod user;
 
 pub async fn main_service(
-    request: Request<Body>,
-    project_handler: Arc<SimpleProjectHandler>,
+    mut request: Request<Body>,
+    project_handler: Arc<SimpleProjectManager>,
     user_store: Box<Arc<UserStore>>,
     user_token_store: Box<Arc<dyn UserTokenStore>>,
     auth_token_store: Box<Arc<dyn AuthTokenStore>>,
 ) -> Result<Response<Body>, Infallible> {
+    // TODO, modifying header may not be accpetable for some
+    // use uuid or some random generated
+    let trace = "avalanceh-trace";
+    request.headers_mut().insert(
+        HeaderName::from_str("avalanche-trace").unwrap(),
+        HeaderValue::from_str(trace).unwrap(),
+    );
     let handle_request =
         project_handler.handle_request(request, user_store, user_token_store, auth_token_store);
-    match handle_request.await {
-        Ok(result) => Ok(result),
+    let response = match handle_request.await {
+        Ok(result) => result,
         Err(error) => {
-            println!("error is {:?}", error);
-            Ok(Response::builder().status(500).body(Body::empty()).unwrap())
+            log::error!("[{}] request ran into error= {:?}", trace, error);
+            Response::builder().status(500).body(Body::empty()).unwrap()
         }
-    }
+    };
+    log::info!(
+        "[{}] request completed with status {:?}",
+        trace,
+        response.status()
+    );
+    Ok(response)
 }

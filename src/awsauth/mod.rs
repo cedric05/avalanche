@@ -194,7 +194,7 @@ mod test {
         output.apply_to_request(&mut signed);
 
         assert_eq!(
-            "4596b207a7fc6bdf18725369bc0cd7022cf20efbd2c19730549f42d1a403648e",
+            "52b637b2211de99f32ec24cbf1dd5bc0cad970b4a9e1dc6927e158cfb2f47bbe",
             signature
         );
 

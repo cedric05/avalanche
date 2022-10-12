@@ -7,56 +7,7 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::error::MarsError;
-
-#[allow(unused)]
-#[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
-pub enum Action {
-    Add,
-    Discard,
-    Pass,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
-pub struct Header {
-    pub key: String,
-    pub value: String,
-    pub action: Action,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
-pub struct UrlParam {
-    pub key: String,
-    pub value: String,
-    pub action: Action,
-}
-
-#[allow(unused)]
-#[derive(Clone, Debug, Eq, PartialEq, Copy, Hash, Serialize, Deserialize)]
-pub enum Method {
-    GET,
-    POST,
-    PUT,
-    DELETE,
-    OPTIONS,
-    CONNECT,
-    HEAD,
-    TRACE,
-    PATCH,
-    COPY,
-    LINK,
-    UNLINK,
-    PURGE,
-    LOCK,
-    UNLOCK,
-    PROPFIND,
-    VIEW,
-    MKCOL,
-    MOVE,
-    PROPPATCH,
-    REPORT,
-    SEARCH,
-    ANY,
-}
+pub use mars_config::*;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ServiceConfig {
@@ -65,13 +16,6 @@ pub struct ServiceConfig {
     pub query_params: Vec<UrlParam>,
     pub headers: Vec<Header>,
     pub handler: ProxyParams,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-
-pub struct ProxyParams {
-    pub params: serde_json::Value,
-    pub handler_type: String,
 }
 
 lazy_static::lazy_static! {
