@@ -9,7 +9,12 @@ use hyper::{service::Service, Body};
 
 use crate::config::ServiceConfig;
 use crate::error::MarsError;
-use crate::user::{AuthToken, AuthTokenStore, UserStore, UserTokenStore};
+use crate::user::{
+    AuthToken,
+    AuthTokenStore,
+    //UserStore,
+    UserTokenStore,
+};
 
 /// project
 /// project has two main variables
@@ -40,7 +45,6 @@ pub trait ProjectManager: Sync + Send {
     async fn handle_request(
         &self,
         request: hyper::Request<Body>,
-        _user_store: Box<Arc<UserStore>>,
         user_token_store: Box<Arc<dyn UserTokenStore>>,
         auth_token_store: Box<Arc<dyn AuthTokenStore>>,
     ) -> Result<Response<Body>, Box<dyn Error>> {

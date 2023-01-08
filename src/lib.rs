@@ -31,14 +31,18 @@ use project::ProjectManager;
 #[cfg(feature = "sql")]
 pub use db::get_db_project_manager;
 pub use simple::get_json_project_manager;
-use user::{AuthTokenStore, UserStore, UserTokenStore};
+use user::{
+    AuthTokenStore,
+    //UserStore,
+    UserTokenStore,
+};
 
 pub mod user;
 
 pub async fn main_service(
     mut request: Request<Body>,
     project_handler: Arc<Box<dyn ProjectManager>>,
-    user_store: Box<Arc<UserStore>>,
+    //    user_store: Box<Arc<UserStore>>,
     user_token_store: Box<Arc<dyn UserTokenStore>>,
     auth_token_store: Box<Arc<dyn AuthTokenStore>>,
 ) -> Result<Response<Body>, Infallible> {
@@ -49,8 +53,12 @@ pub async fn main_service(
         HeaderName::from_str("avalanche-trace").unwrap(),
         HeaderValue::from_str(trace).unwrap(),
     );
-    let handle_request =
-        project_handler.handle_request(request, user_store, user_token_store, auth_token_store);
+    let handle_request = project_handler.handle_request(
+        request,
+        // user_store,
+        user_token_store,
+        auth_token_store,
+    );
     let response = match handle_request.await {
         Ok(result) => result,
         Err(error) => {
@@ -70,7 +78,7 @@ pub async fn get_project_manager(args: &cli::Args) -> Arc<Box<dyn ProjectManager
     #[cfg(feature = "sql")]
     if cfg!(feature = "sql") {
         return match &args.db {
-            Some(db_url) => get_db_project_manager(&db_url)
+            Some(db_url) => get_db_project_manager(db_url)
                 .await
                 .expect("unable to connect to db"),
             None => {
