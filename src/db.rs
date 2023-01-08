@@ -1,15 +1,16 @@
 use crate::auth::get_auth_service;
 
 use dashmap::{mapref::one::RefMut, DashMap};
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use sea_orm::{ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter};
 
 use std::error::Error;
+use std::sync::Arc;
 
 use crate::config::ServiceConfig;
 use crate::project::{ProjectHandler, ProjectManager, ProxyService};
 
 #[derive(Clone)]
-struct DbProject {
+pub struct DbProject {
     name: String,
     project_id: i32,
     services: DashMap<String, (ServiceConfig, Box<dyn ProxyService>)>,
@@ -69,7 +70,7 @@ impl ProjectHandler for DbProject {
 #[derive(Clone)]
 pub struct DbProjectManager {
     db_conn: DatabaseConnection,
-    projects: DashMap<String, Box<dyn ProjectHandler>>,
+    projects: DashMap<String, Arc<Box<dyn ProjectHandler>>>,
 }
 
 #[async_trait::async_trait]
@@ -77,7 +78,7 @@ impl ProjectManager for DbProjectManager {
     async fn get_project(
         &self,
         project_key: String,
-    ) -> Result<Option<Box<dyn ProjectHandler>>, Box<dyn Error>> {
+    ) -> Result<Option<Arc<Box<dyn ProjectHandler>>>, Box<dyn Error>> {
         match self.projects.get_mut(&project_key) {
             Some(service) => Ok(Some(service.clone())),
             None => {
@@ -96,7 +97,7 @@ impl ProjectManager for DbProjectManager {
                             db_con: self.db_conn.clone(),
                         };
                         self.projects
-                            .insert(project_key.clone(), Box::new(db_project));
+                            .insert(project_key.clone(), Arc::new(Box::new(db_project)));
                         self.get_project(project_key).await
                     }
                     None => Ok(None),
@@ -106,6 +107,17 @@ impl ProjectManager for DbProjectManager {
     }
 }
 
+pub async fn get_db_project_manager(
+    url: &str,
+) -> Result<Arc<Box<dyn ProjectManager>>, Box<dyn Error>> {
+    let db = Database::connect(url).await.unwrap();
+
+    let project_manager = DbProjectManager {
+        db_conn: db,
+        projects: DashMap::default(),
+    };
+    Ok(Arc::new(Box::new(project_manager)))
+}
 #[cfg(test)]
 mod test {
 

@@ -1,5 +1,5 @@
 use super::config::ServiceConfig;
-use crate::error::MarsError;
+use crate::{error::MarsError, impl_proxy_service};
 use digest_auth::{AuthContext, HttpMethod};
 use http::{HeaderValue, Request, Response};
 use hyper::{body, client::HttpConnector, Client};
@@ -30,7 +30,7 @@ impl<S> Layer<S> for DigestAuthLayer {
         DigestAuth {
             username: self.username.clone(),
             password: self.password.clone(),
-            inner: inner,
+            inner,
         }
     }
 }
@@ -65,9 +65,7 @@ where
         let password = self.password.clone();
         Box::pin(async move {
             let uri = parts.uri.path_and_query().unwrap().to_string();
-            let body = body::to_bytes(hyper::body::Body::from(body))
-                .await?
-                .to_vec();
+            let body = body::to_bytes(body).await?.to_vec();
             let signable = Request::builder()
                 .method(parts.method.clone())
                 .uri(parts.uri.clone())
@@ -142,3 +140,5 @@ impl TryFrom<&ServiceConfig> for DigestAuth<Client<HttpsConnector<HttpConnector>
         Ok(res)
     }
 }
+
+impl_proxy_service!(DigestAuth);

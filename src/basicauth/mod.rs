@@ -1,5 +1,7 @@
 use std::{convert::TryFrom, future::Future, pin::Pin};
 
+use crate::impl_proxy_service;
+
 use super::error::MarsError;
 
 use super::config::ServiceConfig;
@@ -32,7 +34,7 @@ impl<S> Layer<S> for BasicAuthLayer {
     fn layer(&self, inner: S) -> Self::Service {
         BasicAuth {
             authentication: self.authentication.clone(),
-            inner: inner,
+            inner,
         }
     }
 }
@@ -150,3 +152,5 @@ mod test {
         assert_eq!("cHJhc2FudGg6cHJhc2FudGg=", authentication);
     }
 }
+
+impl_proxy_service!(BasicAuth);

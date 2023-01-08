@@ -8,7 +8,7 @@ use tokio_native_tls::TlsConnector as TokioNativeTlsConnector;
 
 use tower::{Layer, Service, ServiceBuilder};
 
-use crate::{config::ServiceConfig, error::MarsError};
+use crate::{config::ServiceConfig, error::MarsError, impl_proxy_service};
 
 #[derive(Clone)]
 pub struct SslAuth<S> {
@@ -21,7 +21,7 @@ impl<S> Layer<S> for SslAuthLayer {
     type Service = SslAuth<S>;
 
     fn layer(&self, inner: S) -> Self::Service {
-        SslAuth { inner: inner }
+        SslAuth { inner }
     }
 }
 
@@ -119,3 +119,5 @@ mod test {
         Ok(())
     }
 }
+
+impl_proxy_service!(SslAuth);

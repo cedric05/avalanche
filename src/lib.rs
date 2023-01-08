@@ -27,16 +27,17 @@ use std::{convert::Infallible, str::FromStr, sync::Arc};
 use http::{header::HeaderName, HeaderValue, Request, Response};
 use hyper::Body;
 use project::ProjectManager;
-use simple::SimpleProjectManager;
 
-pub use simple::simple_project_handler;
+#[cfg(feature = "sql")]
+pub use db::get_db_project_manager;
+pub use simple::get_json_project_manager;
 use user::{AuthTokenStore, UserStore, UserTokenStore};
 
 pub mod user;
 
 pub async fn main_service(
     mut request: Request<Body>,
-    project_handler: Arc<SimpleProjectManager>,
+    project_handler: Arc<Box<dyn ProjectManager>>,
     user_store: Box<Arc<UserStore>>,
     user_token_store: Box<Arc<dyn UserTokenStore>>,
     auth_token_store: Box<Arc<dyn AuthTokenStore>>,
@@ -63,4 +64,19 @@ pub async fn main_service(
         response.status()
     );
     Ok(response)
+}
+
+pub async fn get_project_manager(args: &cli::Args) -> Arc<Box<dyn ProjectManager>> {
+    #[cfg(feature = "sql")]
+    if cfg!(feature = "sql") {
+        return match &args.db {
+            Some(db_url) => get_db_project_manager(&db_url)
+                .await
+                .expect("unable to connect to db"),
+            None => {
+                get_json_project_manager(args.config.clone().into()).expect("unable to load config")
+            }
+        };
+    }
+    get_json_project_manager(args.config.clone().into()).expect("unable to load config")
 }

@@ -1,6 +1,6 @@
 use std::{future::Future, pin::Pin};
 
-use crate::error::MarsError;
+use crate::{error::MarsError, impl_proxy_service};
 
 use super::config::ServiceConfig;
 use hawk::{Credentials, DigestAlgorithm, Key, RequestBuilder};
@@ -35,8 +35,8 @@ impl<S> Layer<S> for HawkAuthLayer {
         HawkAuth {
             id: self.id.clone(),
             key: self.key.clone(),
-            algorithm: self.algorithm.clone(),
-            inner: inner,
+            algorithm: self.algorithm,
+            inner,
         }
     }
 }
@@ -64,13 +64,13 @@ where
             key: Key::new(self.key.clone(), self.algorithm).unwrap(),
         };
         let url = Url::parse(&req.uri().to_string()).unwrap();
-        let client_req = RequestBuilder::from_url(&req.method().as_str(), &url)
+        let client_req = RequestBuilder::from_url(req.method().as_str(), &url)
             .unwrap()
             .request();
         let header = client_req.make_header(&credentials).unwrap();
         req.headers_mut().insert(
             "Authorization",
-            HeaderValue::from_str(&format!("Hawk {}", header.to_string())).unwrap(),
+            HeaderValue::from_str(&format!("Hawk {}", header)).unwrap(),
         );
         let fut = self.inner.call(req);
         Box::pin(async move { fut.await })
@@ -93,7 +93,7 @@ impl TryFrom<&ServiceConfig> for HawkAuthLayer {
         Ok(HawkAuthLayer {
             id: id.to_string(),
             key: key.to_string(),
-            algorithm: algorithm,
+            algorithm,
         })
     }
 }
@@ -109,3 +109,5 @@ impl TryFrom<&ServiceConfig> for HawkAuth<Client<HttpsConnector<HttpConnector>>>
         Ok(res)
     }
 }
+
+impl_proxy_service!(HawkAuth);

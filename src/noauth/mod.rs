@@ -5,7 +5,7 @@ use hyper::{client::HttpConnector, Client};
 use hyper_tls::HttpsConnector;
 use tower::{Layer, Service, ServiceBuilder};
 
-use crate::{config::ServiceConfig, error::MarsError};
+use crate::{config::ServiceConfig, error::MarsError, impl_proxy_service};
 
 #[derive(Clone)]
 pub struct NoAuth<S> {
@@ -18,7 +18,7 @@ impl<S> Layer<S> for NoAuthLayer {
     type Service = NoAuth<S>;
 
     fn layer(&self, inner: S) -> Self::Service {
-        NoAuth { inner: inner }
+        NoAuth { inner }
     }
 }
 
@@ -54,3 +54,5 @@ impl TryFrom<&ServiceConfig> for NoAuth<Client<HttpsConnector<HttpConnector>>> {
         Ok(service)
     }
 }
+
+impl_proxy_service!(NoAuth);

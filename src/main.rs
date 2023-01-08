@@ -8,7 +8,7 @@ use mars_rover::user::{
     AuthToken, AuthTokenStore, SimpleAuthTokenStore, SimpleUserTokenStore, UserStore,
     UserTokenStore,
 };
-use mars_rover::{main_service, simple_project_handler};
+use mars_rover::{get_project_manager, main_service};
 
 fn conncurrent<T: Default>() -> Box<Arc<T>> {
     let t = T::default();
@@ -23,7 +23,8 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     simple_logger::SimpleLogger::new().init().unwrap();
 
     let args = mars_rover::cli::Args::parse();
-    let project_handler = Arc::new(simple_project_handler(args.config.into())?);
+    let project_handler = get_project_manager(&args).await;
+
     let user_store: Box<Arc<UserStore>> = conncurrent();
     let user_token_store: Box<Arc<dyn UserTokenStore>> =
         Box::new(Arc::new(SimpleUserTokenStore::default()));

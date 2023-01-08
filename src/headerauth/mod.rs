@@ -1,6 +1,6 @@
 use std::{future::Future, pin::Pin, str::FromStr};
 
-use crate::error::MarsError;
+use crate::{error::MarsError, impl_proxy_service};
 
 use super::config::ServiceConfig;
 use http::{
@@ -34,7 +34,7 @@ impl<S> Layer<S> for HeaderAuthLayer {
     fn layer(&self, inner: S) -> Self::Service {
         HeaderAuth {
             header_map: self.header_map.clone(),
-            inner: inner,
+            inner,
         }
     }
 }
@@ -120,3 +120,5 @@ impl TryFrom<&ServiceConfig> for HeaderAuth<Client<HttpsConnector<HttpConnector>
         Ok(res)
     }
 }
+
+impl_proxy_service!(HeaderAuth);

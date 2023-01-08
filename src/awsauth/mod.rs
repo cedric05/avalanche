@@ -15,6 +15,7 @@ use tower::{Layer, Service, ServiceBuilder};
 
 use crate::config::ServiceConfig;
 use crate::error::MarsError;
+use crate::impl_proxy_service;
 
 #[derive(Clone)]
 pub struct AwsAuth<S> {
@@ -41,7 +42,7 @@ impl<S> Layer<S> for AwsAuthLayer {
             secret_key: self.secret_key.clone(),
             region: self.region.clone(),
             service_name: self.service_name.clone(),
-            inner: inner,
+            inner,
         }
     }
 }
@@ -226,3 +227,5 @@ mod test {
         haha()
     }
 }
+
+impl_proxy_service!(AwsAuth);

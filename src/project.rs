@@ -19,6 +19,8 @@ use crate::user::{AuthToken, AuthTokenStore, UserStore, UserTokenStore};
 ///
 ///
 
+pub const AVALANCHE_TOKEN: &str = "avalanche-token";
+
 #[async_trait]
 pub trait ProjectHandler: Sync + Send + DynClone {
     async fn is_project(&self, path: &str) -> bool;
@@ -34,7 +36,7 @@ pub trait ProjectHandler: Sync + Send + DynClone {
 clone_trait_object!(ProjectHandler);
 
 #[async_trait]
-pub trait ProjectManager {
+pub trait ProjectManager: Sync + Send {
     async fn handle_request(
         &self,
         request: hyper::Request<Body>,
@@ -45,7 +47,7 @@ pub trait ProjectManager {
         log::info!("recieved a request {:?}", request.uri());
         let uri = request.uri().clone();
         let uri = uri.path_and_query().unwrap().as_str();
-        let mut url_split = uri.splitn(4, "/");
+        let mut url_split = uri.splitn(4, '/');
         let _host = url_split.next().ok_or(MarsError::UrlError)?;
         let project_key = url_split.next().ok_or(MarsError::UrlError)?;
 
@@ -54,7 +56,7 @@ pub trait ProjectManager {
             Some(project) => {
                 if project.auth_configured().await {
                     let avalanche_token = if let Some(avalanche_token) =
-                        request.headers().get("avalanche-token").cloned()
+                        request.headers().get(AVALANCHE_TOKEN).cloned()
                     {
                         avalanche_token
                     } else {
@@ -73,7 +75,7 @@ pub trait ProjectManager {
                 let service_key = url_split.next().ok_or(MarsError::UrlError)?;
                 let (service, url_rest) = if service_key.contains('?') {
                     let (service, url_rest) = service_key.split_once('?').unwrap();
-                    (service, "?".to_owned() + &url_rest)
+                    (service, "?".to_owned() + url_rest)
                 } else {
                     let url_rest = url_split.next().unwrap_or("");
                     (service_key, url_rest.to_owned())
@@ -93,7 +95,7 @@ pub trait ProjectManager {
     async fn get_project(
         &self,
         project_key: String,
-    ) -> Result<Option<Box<dyn ProjectHandler>>, Box<dyn Error>>;
+    ) -> Result<Option<Arc<Box<dyn ProjectHandler>>>, Box<dyn Error>>;
 }
 
 #[async_trait]

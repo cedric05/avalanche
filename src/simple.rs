@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::Read;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::{convert::TryFrom, error::Error};
 
 use crate::config::ServiceConfig;
@@ -39,26 +40,24 @@ impl ProjectHandler for SimpleProject {
     {
         if self.services.contains_key(&path) {
             Ok(self.services.get_mut(&path))
-        } else {
-            if let Some(config) = self.service_config_map.get(&path).cloned() {
-                if let Ok(res) = get_auth_service(config) {
-                    self.services.insert(path.clone(), res);
-                    Ok(self.services.get_mut(&path))
-                } else {
-                    // TODO
-                    // need to handle error scenarios
-                    Ok(None)
-                }
+        } else if let Some(config) = self.service_config_map.get(&path).cloned() {
+            if let Ok(res) = get_auth_service(config) {
+                self.services.insert(path.clone(), res);
+                Ok(self.services.get_mut(&path))
             } else {
+                // TODO
+                // need to handle error scenarios
                 Ok(None)
             }
+        } else {
+            Ok(None)
         }
     }
 }
 
 #[derive(Clone)]
 pub struct SimpleProjectManager {
-    projects: DashMap<String, Box<dyn ProjectHandler>>,
+    projects: DashMap<String, Arc<Box<dyn ProjectHandler>>>,
 }
 
 // unsafe impl Send for SimpleProjectHandler {}
@@ -68,7 +67,7 @@ impl ProjectManager for SimpleProjectManager {
     async fn get_project(
         &self,
         project_key: String,
-    ) -> Result<Option<Box<dyn ProjectHandler>>, Box<dyn Error>> {
+    ) -> Result<Option<Arc<Box<dyn ProjectHandler>>>, Box<dyn Error>> {
         let project = self
             .projects
             .get_mut(&project_key)
@@ -106,7 +105,7 @@ impl TryFrom<Value> for SimpleProject {
         }
         Ok(SimpleProject {
             service_config_map,
-            needs_auth: needs_auth,
+            needs_auth,
             name: "no meaning as of now".to_string(),
             services: service_map,
         })
@@ -123,17 +122,17 @@ impl TryFrom<Value> for SimpleProjectManager {
             let project_config = project_config.take();
             let project = SimpleProject::try_from(project_config)?;
             let project: Box<dyn ProjectHandler> = Box::new(project);
-            map.insert(project_key.to_string(), project);
+            map.insert(project_key.to_string(), Arc::new(project));
         }
         Ok(SimpleProjectManager { projects: map })
     }
 }
 
-pub fn simple_project_handler(path: PathBuf) -> Result<SimpleProjectManager, MarsError> {
+pub fn get_json_project_manager(path: PathBuf) -> Result<Arc<Box<dyn ProjectManager>>, MarsError> {
     let mut file = fs::File::open(path).map_err(|_| MarsError::ServiceConfigError)?;
     let mut config = String::new();
     file.read_to_string(&mut config)
         .map_err(|_| MarsError::ServiceConfigError)?;
     let value: Value = json5::from_str(&config).map_err(|_| MarsError::ServiceConfigError)?;
-    SimpleProjectManager::try_from(value)
+    Ok(Arc::new(Box::new(SimpleProjectManager::try_from(value)?)))
 }
