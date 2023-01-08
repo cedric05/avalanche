@@ -46,6 +46,7 @@ sea-orm = { version = "0.9", features = [
     "sqlx-sqlite",
     "runtime-tokio-native-tls",
 ], optional = true }
+uuid = "1.2.2"
 
 
 [features]

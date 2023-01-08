@@ -48,10 +48,10 @@ pub async fn main_service(
 ) -> Result<Response<Body>, Infallible> {
     // TODO, modifying header may not be accpetable for some
     // use uuid or some random generated
-    let trace = "avalanceh-trace";
+    let trace = uuid::Uuid::new_v4().to_string();
     request.headers_mut().insert(
         HeaderName::from_str("avalanche-trace").unwrap(),
-        HeaderValue::from_str(trace).unwrap(),
+        HeaderValue::from_str(&trace).unwrap(),
     );
     let handle_request = project_handler.handle_request(
         request,
