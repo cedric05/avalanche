@@ -36,15 +36,16 @@ impl ServiceConfig {
         self.handler
             .params
             .get(key)
-            .ok_or(MarsError::ServiceConfigError(format!(
-                "service config `{}` not found",
-                key
-            )))?
+            .ok_or_else(|| {
+                MarsError::ServiceConfigError(format!("service config `{}` not found", key))
+            })?
             .as_str()
-            .ok_or(MarsError::ServiceConfigError(format!(
-                "service config `{}` found but not string",
-                key
-            )))
+            .ok_or_else(|| {
+                MarsError::ServiceConfigError(format!(
+                    "service config `{}` found but not string",
+                    key
+                ))
+            })
     }
 
     pub fn get_timeout(&self) -> Option<f64> {
