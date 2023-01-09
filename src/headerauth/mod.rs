@@ -3,12 +3,10 @@ use std::{future::Future, pin::Pin, str::FromStr};
 use crate::{error::MarsError, impl_proxy_service};
 
 use super::config::ServiceConfig;
-use http::{
-    header::{HeaderName, InvalidHeaderValue},
-    HeaderMap, HeaderValue, Request, Response,
-};
+use http::{header::HeaderName, HeaderMap, HeaderValue, Request, Response};
 use hyper::{client::HttpConnector, Client};
 use hyper_tls::HttpsConnector;
+use serde::{Deserialize, Serialize};
 use tower::{Layer, Service, ServiceBuilder};
 
 #[derive(Clone)]
@@ -41,10 +39,8 @@ impl<S> Layer<S> for HeaderAuthLayer {
 
 #[allow(unused)]
 impl HeaderAuthLayer {
-    pub fn from_header(
-        header_map: HeaderMap<HeaderValue>,
-    ) -> Result<HeaderAuthLayer, InvalidHeaderValue> {
-        Ok(HeaderAuthLayer::new(header_map))
+    pub fn from_header(header_map: HeaderMap<HeaderValue>) -> HeaderAuthLayer {
+        HeaderAuthLayer::new(header_map)
     }
 }
 
@@ -73,38 +69,62 @@ where
     }
 }
 
+#[derive(Serialize, Deserialize)]
+struct HeadersAuthConfig(Vec<HeaderAuthConfig>);
+
+#[derive(Serialize, Deserialize)]
+
+struct HeaderAuthConfig {
+    key: String,
+    value: String,
+}
+
+impl TryFrom<HeaderAuthConfig> for (HeaderName, HeaderValue) {
+    type Error = MarsError;
+
+    fn try_from(header_config: HeaderAuthConfig) -> Result<Self, Self::Error> {
+        Ok((
+            HeaderName::from_str(&header_config.key).map_err(|x| {
+                MarsError::ServiceConfigError(format!(
+                    "unable to crate header name from {} because of {x}",
+                    header_config.key
+                ))
+            })?,
+            HeaderValue::from_str(&header_config.value).map_err(|x| {
+                MarsError::ServiceConfigError(format!(
+                    "unable to crate header value from {} because of {x}",
+                    header_config.value
+                ))
+            })?,
+        ))
+    }
+}
+
+impl TryFrom<HeadersAuthConfig> for HeaderMap {
+    type Error = MarsError;
+
+    fn try_from(value: HeadersAuthConfig) -> Result<Self, Self::Error> {
+        let mut header_map = HeaderMap::default();
+        for x in value.0 {
+            let (name, value) = TryInto::<(HeaderName, HeaderValue)>::try_into(x)?;
+            header_map.insert(name, value);
+        }
+        Ok(header_map)
+    }
+}
+
 impl TryFrom<&ServiceConfig> for HeaderAuthLayer {
     type Error = MarsError;
 
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let mut header_map = HeaderMap::new();
-        for header_pair in value
-            .handler
-            .params
-            .as_array()
-            .ok_or(MarsError::ServiceConfigError)?
-        {
-            let pair = header_pair
-                .as_object()
-                .ok_or(MarsError::ServiceConfigError)?;
-            let value = pair
-                .get("key")
-                .ok_or(MarsError::ServiceConfigError)?
-                .as_str()
-                .ok_or(MarsError::ServiceConfigError)?;
-            let header_key =
-                HeaderName::from_str(value).map_err(|_| MarsError::ServiceConfigError)?;
-            let value = pair
-                .get("value")
-                .ok_or(MarsError::ServiceConfigError)?
-                .as_str()
-                .ok_or(MarsError::ServiceConfigError)?;
-            let header_value =
-                HeaderValue::from_str(value).map_err(|_| MarsError::ServiceConfigError)?;
-            header_map.insert(header_key, header_value);
-        }
-        let header_auth_layer =
-            HeaderAuthLayer::from_header(header_map).map_err(|_| MarsError::ServiceConfigError)?;
+        let headers_auth_config: HeadersAuthConfig =
+            serde_json::from_value(value.handler.params.clone()).map_err(|err| {
+                MarsError::ServiceConfigError(format!(
+                    "unable to parse headers auth config because of  {err}"
+                ))
+            })?;
+        let header_map = TryInto::<HeaderMap>::try_into(headers_auth_config)?;
+        let header_auth_layer = HeaderAuthLayer::from_header(header_map);
         Ok(header_auth_layer)
     }
 }

@@ -10,7 +10,10 @@ macro_rules! impl_mandatory_types {
         impl ValueType for $name {
             fn try_from(v: Value) -> Result<Self, sea_orm::sea_query::ValueTypeErr> {
                 match v {
-                    Value::String(Some(x)) => Ok(serde_json::from_str(&x).unwrap()),
+                    Value::String(Some(x)) => {
+                        Ok(serde_json::from_str(&x)
+                            .map_err(|_| sea_orm::sea_query::ValueTypeErr)?)
+                    }
                     _ => Err(sea_orm::sea_query::ValueTypeErr),
                 }
             }

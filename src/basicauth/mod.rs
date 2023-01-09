@@ -86,7 +86,11 @@ impl TryFrom<&ServiceConfig> for BasicAuthLayer {
         let username = value.get_handler_config("username")?;
         let password = value.get_handler_config("password")?;
         let basic_auth_layer = BasicAuthLayer::from_username_n_password(username, password)
-            .map_err(|_| MarsError::ServiceConfigError)?;
+            .map_err(|_| {
+                MarsError::ServiceConfigError(format!(
+                    "configured username({username}) or password({password}) encoding ran into failure"
+                ))
+            })?;
         Ok(basic_auth_layer)
     }
 }

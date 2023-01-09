@@ -68,10 +68,9 @@ impl ProjectManager for SimpleProjectManager {
         &self,
         project_key: String,
     ) -> Result<Option<Arc<Box<dyn ProjectHandler>>>, Box<dyn Error>> {
-        let project = self
-            .projects
-            .get_mut(&project_key)
-            .ok_or(MarsError::ServiceConfigError)?;
+        let project = self.projects.get_mut(&project_key).ok_or_else(|| {
+            MarsError::ServiceConfigError(format!("project `{project_key}` is missing"))
+        })?;
         Ok(Some(project.clone()))
     }
 }
@@ -82,7 +81,7 @@ impl TryFrom<Value> for SimpleProject {
     fn try_from(mut project_config: Value) -> Result<Self, Self::Error> {
         let project_config = project_config
             .as_object_mut()
-            .ok_or(MarsError::ServiceConfigError)?;
+            .ok_or_else(|| MarsError::ServiceConfigError("project is not object".to_string()))?;
 
         let needs_auth = project_config
             .get("needs_auth")
@@ -93,14 +92,22 @@ impl TryFrom<Value> for SimpleProject {
         let mut service_config_map = HashMap::new();
         let sub_project_config = project_config
             .get_mut("subprojects")
-            .ok_or(MarsError::ServiceConfigError)?
+            .ok_or_else(|| {
+                MarsError::ServiceConfigError("subprojects is not available".to_string())
+            })?
             .as_object_mut()
-            .ok_or(MarsError::ServiceConfigError)?;
+            .ok_or_else(|| {
+                MarsError::ServiceConfigError("subprojects is not object".to_string())
+            })?;
 
         for (service_key, service_config_value) in sub_project_config.into_iter() {
             let service_config = service_config_value.take();
-            let service_config: ServiceConfig = serde_json::from_value(service_config)
-                .map_err(|_| MarsError::ServiceConfigError)?;
+            let service_config: ServiceConfig =
+                serde_json::from_value(service_config).map_err(|_| {
+                    MarsError::ServiceConfigError(format!(
+                        "serviceconfig for `{service_key}` is not parsable "
+                    ))
+                })?;
             service_config_map.insert(service_key.to_string(), service_config);
         }
         Ok(SimpleProject {
@@ -116,7 +123,9 @@ impl TryFrom<Value> for SimpleProjectManager {
     type Error = MarsError;
 
     fn try_from(mut value: Value) -> Result<Self, Self::Error> {
-        let all_config = value.as_object_mut().ok_or(MarsError::ServiceConfigError)?;
+        let all_config = value
+            .as_object_mut()
+            .ok_or_else(|| MarsError::ServiceConfigError("config is not object".to_string()))?;
         let map = DashMap::new();
         for (project_key, project_config) in all_config {
             let project_config = project_config.take();
@@ -129,10 +138,12 @@ impl TryFrom<Value> for SimpleProjectManager {
 }
 
 pub fn get_json_project_manager(path: PathBuf) -> Result<Arc<Box<dyn ProjectManager>>, MarsError> {
-    let mut file = fs::File::open(path).map_err(|_| MarsError::ServiceConfigError)?;
+    let mut file = fs::File::open(path)
+        .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
     let mut config = String::new();
     file.read_to_string(&mut config)
-        .map_err(|_| MarsError::ServiceConfigError)?;
-    let value: Value = json5::from_str(&config).map_err(|_| MarsError::ServiceConfigError)?;
+        .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
+    let value: Value = json5::from_str(&config)
+        .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
     Ok(Arc::new(Box::new(SimpleProjectManager::try_from(value)?)))
 }

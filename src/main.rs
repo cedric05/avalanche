@@ -1,4 +1,6 @@
 use std::convert::Infallible;
+use std::net::SocketAddr;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use clap::Parser;
@@ -19,7 +21,10 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // TODO setup simple console output logger
     // For every connection, we must make a `Service` to handle all
     // incoming HTTP requests on said connection.
-    simple_logger::SimpleLogger::new().init().unwrap();
+    simple_logger::SimpleLogger::new()
+        .with_colors(true)
+        .with_level(log::LevelFilter::Info)
+        .init()?;
 
     let args = mars_rover::cli::Args::parse();
     let project_handler = get_project_manager(&args).await;
@@ -62,7 +67,7 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         }
     });
 
-    let addr = ([127, 0, 0, 1], args.port).into();
+    let addr = SocketAddr::from_str(&args.addr)?;
 
     let server = Server::bind(&addr).serve(make_svc);
 

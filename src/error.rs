@@ -2,8 +2,8 @@ use std::{error::Error, fmt::Display};
 
 #[derive(Debug)]
 pub enum MarsError {
-    UrlError,
-    ServiceConfigError,
+    UrlError(String),
+    ServiceConfigError(String),
     ServiceNotRegistered,
     Error(Box<dyn Error + Sync + Send>),
 }
@@ -11,8 +11,8 @@ pub enum MarsError {
 impl Display for MarsError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            MarsError::UrlError => f.write_str("urlerror"),
-            MarsError::ServiceConfigError => f.write_str("service config error"),
+            MarsError::UrlError(str) => writeln!(f, "UrlError {}", str),
+            MarsError::ServiceConfigError(str) => writeln!(f, "ServiceConfigError {}", str),
             MarsError::Error(error) => writeln!(f, "dynamic error error {}", error),
             MarsError::ServiceNotRegistered => writeln!(f, "service not registered error"),
         }

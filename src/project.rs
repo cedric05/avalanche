@@ -40,6 +40,15 @@ pub trait ProjectHandler: Sync + Send + DynClone {
 
 clone_trait_object!(ProjectHandler);
 
+fn response_from_status_message(
+    status: u16,
+    message: String,
+) -> Result<Response<Body>, Box<dyn Error>> {
+    Ok(Response::builder()
+        .status(status)
+        .body(Body::from(message))?)
+}
+
 #[async_trait]
 pub trait ProjectManager: Sync + Send {
     async fn handle_request(
@@ -52,8 +61,12 @@ pub trait ProjectManager: Sync + Send {
         let uri = request.uri().clone();
         let uri = uri.path_and_query().unwrap().as_str();
         let mut url_split = uri.splitn(4, '/');
-        let _host = url_split.next().ok_or(MarsError::UrlError)?;
-        let project_key = url_split.next().ok_or(MarsError::UrlError)?;
+        let _host = url_split.next().ok_or_else(||MarsError::UrlError(
+            "marsrover url should contain https://<host>/<project>/<subproject>/<rest>. host it is missing".to_string()
+        ))?;
+        let project_key = url_split.next().ok_or_else(||MarsError::UrlError(
+            "marsrover url should contain https://<host>/<project>/<subproject>/<rest>. project it is missing".to_string()
+        ))?;
 
         let project = self.get_project(project_key.to_string()).await?;
         match project {
@@ -64,19 +77,29 @@ pub trait ProjectManager: Sync + Send {
                     {
                         avalanche_token
                     } else {
-                        return Ok(Response::builder().status(401).body(Body::empty()).unwrap());
+                        return response_from_status_message(
+                            401,
+                            "avalanche token not provided".into(),
+                        );
                     };
                     let avalanche_token =
                         AuthToken(String::from_utf8(avalanche_token.as_bytes().to_vec())?);
                     if !(user_token_store.exists(&avalanche_token)
                         || auth_token_store.exists(&avalanche_token, project_key))
                     {
-                        return Ok(Response::builder().status(401).body(Body::empty()).unwrap());
+                        return response_from_status_message(
+                            401,
+                            "avalanche token not valid".into(),
+                        );
                     }
                 }
 
                 // TODO, service has not extra backslash ('/'), service contains `?` also, which messes up everything
-                let service_key = url_split.next().ok_or(MarsError::UrlError)?;
+                let service_key = url_split.next().ok_or_else(||MarsError::UrlError(
+                    "marsrover url should contain https://<host>/<project>/<subproject>/<rest>. subproject is missing".to_string()
+                ))?;
+                // TODO
+                // inplace of service_key contains, we may have to go with startswith
                 let (service, url_rest) = if service_key.contains('?') {
                     let (service, url_rest) = service_key.split_once('?').unwrap();
                     (service, "?".to_owned() + url_rest)
@@ -87,13 +110,18 @@ pub trait ProjectManager: Sync + Send {
                 let mut service_n_config = project
                     .get_service(service.to_string())
                     .await?
-                    .ok_or(MarsError::ServiceConfigError)?;
+                    .ok_or_else(|| {
+                        MarsError::ServiceConfigError(format!(
+                            "project `{}`'s subproject `{}` configured incorrectly or not",
+                            project_key, service_key
+                        ))
+                    })?;
                 let (service_config, service) = service_n_config.value_mut();
                 return service
                     .handle_service(url_rest.as_str(), service_config, request)
                     .await;
             }
-            None => Ok(Response::builder().status(404).body(Body::empty()).unwrap()),
+            None => return response_from_status_message(404, "project not found".into()),
         }
     }
     async fn get_project(

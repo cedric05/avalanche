@@ -9,6 +9,6 @@ pub struct Args {
     #[clap(short, long)]
     pub db: Option<String>,
 
-    #[clap(short, long, default_value_t = 3000)]
-    pub port: u16,
+    #[clap(short, long, default_value = "localhost:3000")]
+    pub addr: String,
 }

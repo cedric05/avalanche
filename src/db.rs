@@ -110,7 +110,7 @@ impl ProjectManager for DbProjectManager {
 pub async fn get_db_project_manager(
     url: &str,
 ) -> Result<Arc<Box<dyn ProjectManager>>, Box<dyn Error>> {
-    let db = Database::connect(url).await.unwrap();
+    let db = Database::connect(url).await?;
 
     let project_manager = DbProjectManager {
         db_conn: db,
@@ -146,7 +146,7 @@ mod test {
                 println!("project fetch working");
                 let service = project.get_service("test2".to_string()).await;
                 match service {
-                    Ok(Some(service)) => {
+                    Ok(Some(_service)) => {
                         println!("service fetch working  ");
                     }
                     Ok(None) => {

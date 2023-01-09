@@ -31,9 +31,12 @@ impl TryFrom<&ServiceConfig> for Identity {
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
         let pkcs_der = value.get_handler_config("pkcs12")?;
         let password = value.get_handler_config("pkcs12_password")?;
-        let pkcs_der = base64::decode(pkcs_der).map_err(|_| MarsError::ServiceConfigError)?;
-        let identity = Identity::from_pkcs12(&pkcs_der, password)
-            .map_err(|_| MarsError::ServiceConfigError)?;
+        let pkcs_der = base64::decode(pkcs_der).map_err(|err| {
+            MarsError::ServiceConfigError(format!("unable to parse pkcs_der: {}", err))
+        })?;
+        let identity = Identity::from_pkcs12(&pkcs_der, password).map_err(|err| {
+            MarsError::ServiceConfigError(format!("unable to parse pkcs12 error: {}", err))
+        })?;
         Ok(identity)
     }
 }
@@ -66,10 +69,13 @@ impl TryFrom<&ServiceConfig> for SslAuth<Client<HttpsConnector<HttpConnector>>> 
 
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
         let identity = Identity::try_from(value)?;
-        let native_tls_connector = TlsConnector::builder()
-            .identity(identity)
-            .build()
-            .map_err(|_| MarsError::ServiceConfigError)?;
+        let native_tls_connector =
+            TlsConnector::builder()
+                .identity(identity)
+                .build()
+                .map_err(|err| {
+                    MarsError::ServiceConfigError(format!("tlsbuild failed into error: {}", err))
+                })?;
         let tokio_native_tls_connector = TokioNativeTlsConnector::from(native_tls_connector);
         let mut http_connector = HttpConnector::new();
         http_connector.enforce_http(false);

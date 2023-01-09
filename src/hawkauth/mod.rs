@@ -88,7 +88,11 @@ impl TryFrom<&ServiceConfig> for HawkAuthLayer {
             "sha256" => DigestAlgorithm::Sha256,
             "sha384" => DigestAlgorithm::Sha384,
             "sha512" => DigestAlgorithm::Sha512,
-            _ => return Err(MarsError::ServiceConfigError),
+            _ => {
+                return Err(MarsError::ServiceConfigError(
+                    "unsupported algorithm for hawk auth".to_string(),
+                ))
+            }
         };
         Ok(HawkAuthLayer {
             id: id.to_string(),
