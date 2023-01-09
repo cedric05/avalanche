@@ -45,9 +45,11 @@ impl BasicAuthLayer {
         username: &str,
         password: &str,
     ) -> Result<BasicAuthLayer, InvalidHeaderValue> {
-        let authentication = format!("{}:{}", username, password);
-        let authentication = base64::encode(authentication);
-        Ok(BasicAuthLayer::new(HeaderValue::from_str(&authentication)?))
+        // Authorization: Basic <base64encoded_value>;
+        Ok(BasicAuthLayer::new(HeaderValue::from_str(&format!(
+            "Basic {}",
+            base64::encode(format!("{}:{}", username, password))
+        ))?))
     }
 }
 
@@ -71,7 +73,7 @@ where
     fn call(&mut self, req: Request<ReqBody>) -> Self::Future {
         let mut req = req;
         req.headers_mut()
-            .append("Authentication", self.authentication.clone());
+            .append("Authorization", self.authentication.clone());
         let fut = self.inner.call(req);
         Box::pin(async move { fut.await })
     }
@@ -103,7 +105,7 @@ impl TryFrom<&ServiceConfig> for BasicAuth<Client<HttpsConnector<HttpConnector>>
 
 #[cfg(test)]
 mod test {
-    use http::{Request, Response};
+    use http::{Request, Response, StatusCode};
     use hyper::{client::HttpConnector, Client};
     use hyper_tls::HttpsConnector;
     use std::{future::Future, pin::Pin};
@@ -132,24 +134,11 @@ mod test {
             .service(client);
         let mut service: Box<dyn ProxyService> = Box::new(service);
         let request = Request::builder()
-            .uri("https://httpbin.org/get")
+            .uri("https://httpbin.org/basic-auth/prasanth/prasanth")
             .body(hyper::Body::empty())
             .unwrap();
-        let response = service.call(request).await.unwrap();
-        let body_bytes = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let s: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
-        let authentication = s
-            .as_object()
-            .unwrap()
-            .get("headers")
-            .unwrap()
-            .as_object()
-            .unwrap()
-            .get("Authentication")
-            .unwrap()
-            .as_str()
-            .unwrap();
-        assert_eq!("cHJhc2FudGg6cHJhc2FudGg=", authentication);
+        let response: Response<_> = service.call(request).await.unwrap();
+        assert_eq!(StatusCode::OK, response.status());
     }
 }
 

@@ -51,8 +51,9 @@ mod test {
         println!("{:?}\n {result:?}", db);
 
         let pear = ActiveModel {
-            id: sea_orm::ActiveValue::Set(11),
             project_id: sea_orm::ActiveValue::Set(1),
+            // auto increment
+            id: sea_orm::ActiveValue::NotSet,
             method: sea_orm::ActiveValue::Set(Method(mars_config::Method::GET)),
             query_params: sea_orm::ActiveValue::Set(QueryParams(vec![QueryParam {
                 key: "haha".to_owned(),
@@ -69,10 +70,12 @@ mod test {
                     "password": "password",
                     "username": "prasanth"
                 }),
-                handler_type: "no_auth".to_string(),
+                handler_type: "basic_auth".to_string(),
             })),
-            index: sea_orm::ActiveValue::Set("test2".to_owned()),
-            url: sea_orm::ActiveValue::Set("https://httpbin.org/".to_owned()),
+            index: sea_orm::ActiveValue::Set("test4".to_owned()),
+            url: sea_orm::ActiveValue::Set(
+                "https://req.dothttp.dev/https://httpbin.org/".to_owned(),
+            ),
         };
         let res = Entity::insert(pear).exec(&db).await.unwrap();
 
