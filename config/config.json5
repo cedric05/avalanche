@@ -73,7 +73,24 @@
                         "access_key": "",
                         "secret_key": "",
                         "region": "us-east-1",
-                        "service": "ec2"
+                        "service": "ec2",
+                        "sign_content": false
+                    },
+                    "handler_type": "aws_auth"
+                }
+            },
+            "aws_s3": {
+                "url": "https://s3.amazonaws.com/",
+                "method": "ANY",
+                "query_params": [],
+                "headers": [],
+                "handler": {
+                    "params": {
+                        "access_key": "",
+                        "secret_key": "",
+                        "region": "us-east-1",
+                        "service": "s3",
+                        "sign_content": true
                     },
                     "handler_type": "aws_auth"
                 }

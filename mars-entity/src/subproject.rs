@@ -56,26 +56,24 @@ mod test {
             id: sea_orm::ActiveValue::NotSet,
             method: sea_orm::ActiveValue::Set(Method(mars_config::Method::GET)),
             query_params: sea_orm::ActiveValue::Set(QueryParams(vec![QueryParam {
-                key: "haha".to_owned(),
-                value: "haha".to_owned(),
+                key: "querykey".to_owned(),
+                value: "queryvalue".to_owned(),
                 action: Action::Add,
             }])),
             headers: sea_orm::ActiveValue::Set(Headers(vec![Header {
-                key: "haha".to_owned(),
-                value: "haha".to_owned(),
+                key: "headerkey".to_owned(),
+                value: "headervalue".to_owned(),
                 action: Action::Add,
             }])),
             handler_type: sea_orm::ActiveValue::Set(HandlerParams(ProxyParams {
                 params: json!({
                     "password": "password",
-                    "username": "prasanth"
+                    "username": "postman"
                 }),
-                handler_type: "basic_auth".to_string(),
+                handler_type: "digest_auth".to_string(),
             })),
-            index: sea_orm::ActiveValue::Set("test4".to_owned()),
-            url: sea_orm::ActiveValue::Set(
-                "https://req.dothttp.dev/https://httpbin.org/".to_owned(),
-            ),
+            index: sea_orm::ActiveValue::Set("digest".to_owned()),
+            url: sea_orm::ActiveValue::Set("https://postman-echo.com/".to_owned()),
         };
         let res = Entity::insert(pear).exec(&db).await.unwrap();
 

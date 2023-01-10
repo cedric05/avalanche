@@ -51,6 +51,10 @@ impl ServiceConfig {
             })
     }
 
+    pub(crate) fn get_param_value(&self, key: &str) -> Option<serde_json::Value> {
+        self.handler.params.get(key).cloned()
+    }
+
     // timeout for a request
     pub(crate) fn get_timeout(&self) -> Option<f64> {
         self.handler.params.get("timeout").and_then(|x| x.as_f64())

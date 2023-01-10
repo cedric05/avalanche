@@ -2,7 +2,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::time::SystemTime;
 
-use aws_sigv4::http_request::{sign, SignableBody, SignableRequest};
+use aws_sigv4::http_request::{sign, PayloadChecksumKind, SignableBody, SignableRequest};
 use aws_sigv4::{http_request::SigningSettings, signing_params::Builder as SignparamsBuilder};
 
 use http::{Request, Response};
@@ -20,6 +20,7 @@ pub(crate) struct AwsAuth<S> {
     secret_key: String,
     region: String,
     service_name: String,
+    sign_content: bool,
     inner: S,
 }
 
@@ -28,6 +29,7 @@ pub(crate) struct AwsAuthLayer {
     secret_key: String,
     region: String,
     service_name: String,
+    sign_content: bool,
 }
 
 impl<S> Layer<S> for AwsAuthLayer {
@@ -39,6 +41,7 @@ impl<S> Layer<S> for AwsAuthLayer {
             secret_key: self.secret_key.clone(),
             region: self.region.clone(),
             service_name: self.service_name.clone(),
+            sign_content: self.sign_content.clone(),
             inner,
         }
     }
@@ -74,10 +77,18 @@ where
         let region = self.region.clone();
         let service_name = self.service_name.clone();
         let (parts, body) = req.into_parts();
+        let sign_content = self.sign_content.clone();
         let mut orig = self.inner.clone();
         Box::pin(async move {
-            let settings = SigningSettings::default();
-            let params: SignparamsBuilder<SigningSettings> = Default::default();
+            let mut settings = SigningSettings::default();
+            if sign_content {
+                settings.payload_checksum_kind = PayloadChecksumKind::XAmzSha256
+            } else {
+                settings.payload_checksum_kind = PayloadChecksumKind::NoHeader
+            };
+            let body = body::to_bytes(body).await?;
+            let sign_body = SignableBody::Bytes(&body);
+            let params = SignparamsBuilder::default();
             let params = params
                 .access_key(&access_key)
                 .secret_key(&secret_key)
@@ -87,18 +98,11 @@ where
                 .settings(settings)
                 .build()
                 .unwrap();
-            let body = body::to_bytes(body).await?;
-            let signable = SignableRequest::new(
-                &parts.method,
-                &parts.uri,
-                &parts.headers,
-                // TODO bytable request is not working
-                SignableBody::Bytes(&body),
-            );
+            let signable =
+                SignableRequest::new(&parts.method, &parts.uri, &parts.headers, sign_body);
             let out = sign(signable, &params).unwrap();
             let (output, _signature) = out.into_parts();
-            let body = hyper::Body::from(body);
-            let mut signable = Request::from_parts(parts, body);
+            let mut signable = Request::from_parts(parts, hyper::Body::from(body));
             output.apply_to_request(&mut signable);
             orig.call(signable).await
         })
@@ -113,11 +117,16 @@ impl TryFrom<&ServiceConfig> for AwsAuthLayer {
         let secret_key = value.get_handler_config("secret_key")?;
         let region = value.get_handler_config("region")?;
         let service = value.get_handler_config("service")?;
+        let sign_content = value
+            .get_param_value("sign_content")
+            .and_then(|x| x.as_bool())
+            .unwrap_or_default();
         let aws_auth_layer = AwsAuthLayer {
             access_key: access_key.to_string(),
             secret_key: secret_key.to_string(),
             region: region.to_string(),
             service_name: service.to_string(),
+            sign_content: sign_content,
         };
         Ok(aws_auth_layer)
     }
