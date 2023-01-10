@@ -8,7 +8,7 @@ use tower::{Layer, Service, ServiceBuilder};
 use crate::{config::ServiceConfig, error::MarsError, impl_proxy_service};
 
 #[derive(Clone)]
-pub struct NoAuth<S> {
+pub (crate) struct NoAuth<S> {
     inner: S,
 }
 

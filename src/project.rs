@@ -24,10 +24,10 @@ use crate::user::{
 ///
 ///
 
-pub const AVALANCHE_TOKEN: &str = "avalanche-token";
+pub (crate) const AVALANCHE_TOKEN: &str = "avalanche-token";
 
 #[async_trait]
-pub trait ProjectHandler: Sync + Send + DynClone {
+pub (crate) trait ProjectHandler: Sync + Send + DynClone {
     async fn is_project(&self, path: &str) -> bool;
 
     async fn get_service(
@@ -50,7 +50,7 @@ fn response_from_status_message(
 }
 
 #[async_trait]
-pub trait ProjectManager: Sync + Send {
+pub (crate) trait ProjectManager: Sync + Send {
     async fn handle_request(
         &self,
         request: hyper::Request<Body>,
@@ -131,7 +131,7 @@ pub trait ProjectManager: Sync + Send {
 }
 
 #[async_trait]
-pub trait ProxyService:
+pub (crate) trait ProxyService:
     Sync
     + Send
     + DynClone

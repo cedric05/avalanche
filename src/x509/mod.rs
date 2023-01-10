@@ -11,7 +11,7 @@ use tower::{Layer, Service, ServiceBuilder};
 use crate::{config::ServiceConfig, error::MarsError, impl_proxy_service};
 
 #[derive(Clone)]
-pub struct SslAuth<S> {
+pub (crate) struct SslAuth<S> {
     inner: S,
 }
 
@@ -101,7 +101,7 @@ mod test {
     const CERTIFICATE_P12: &str = "./resources/badssl.com-client.p12";
 
     #[tokio::test]
-    pub async fn test_certificate() -> Result<(), Box<dyn Error>> {
+    pub (crate) async fn test_certificate() -> Result<(), Box<dyn Error>> {
         let mut file = std::fs::File::open(CERTIFICATE_P12)?;
         let mut certificate_der = vec![];
         file.read_to_end(&mut certificate_der)?;

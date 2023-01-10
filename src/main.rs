@@ -1,3 +1,28 @@
+#[cfg(feature = "awsauth")]
+mod awsauth;
+#[cfg(feature = "basicauth")]
+mod basicauth;
+mod cli;
+mod config;
+#[cfg(feature = "sql")]
+mod db;
+#[cfg(feature = "digestauth")]
+mod digestauth;
+mod error;
+#[cfg(feature = "hawkauth")]
+mod hawkauth;
+mod headerauth;
+mod noauth;
+mod project;
+mod simple;
+#[cfg(feature = "x509auth")]
+mod x509;
+#[macro_use]
+mod utils;
+mod user;
+
+mod auth;
+
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::str::FromStr;
@@ -6,7 +31,7 @@ use std::sync::Arc;
 use clap::Parser;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::Server;
-use mars_rover::user::{
+use user::{
     AuthToken,
     AuthTokenStore,
     SimpleAuthTokenStore,
@@ -14,10 +39,65 @@ use mars_rover::user::{
     //UserStore,
     UserTokenStore,
 };
-use mars_rover::{get_project_manager, main_service};
+
+use http::{header::HeaderName, HeaderValue, Request, Response};
+use hyper::Body;
+use project::ProjectManager;
+
+async fn main_service(
+    mut request: Request<Body>,
+    project_handler: Arc<Box<dyn ProjectManager>>,
+    //    user_store: Box<Arc<UserStore>>,
+    user_token_store: Box<Arc<dyn UserTokenStore>>,
+    auth_token_store: Box<Arc<dyn AuthTokenStore>>,
+) -> Result<Response<Body>, Infallible> {
+    // TODO, modifying header may not be accpetable for some
+    // use uuid or some random generated
+    let trace = uuid::Uuid::new_v4().to_string();
+    request.headers_mut().insert(
+        HeaderName::from_str("avalanche-trace").unwrap(),
+        HeaderValue::from_str(&trace).unwrap(),
+    );
+    let handle_request = project_handler.handle_request(
+        request,
+        // user_store,
+        user_token_store,
+        auth_token_store,
+    );
+    let response = match handle_request.await {
+        Ok(result) => result,
+        Err(error) => {
+            log::error!("[{}] request ran into error= {:?}", trace, error);
+            Response::builder()
+                .status(500)
+                .body(Body::from(format!("error: {}", error)))
+                .unwrap()
+        }
+    };
+    log::info!(
+        "[{}] request completed with status {:?}",
+        trace,
+        response.status()
+    );
+    Ok(response)
+}
+
+async fn get_project_manager(args: &cli::Args) -> Arc<Box<dyn ProjectManager>> {
+    #[cfg(feature = "sql")]
+    if cfg!(feature = "sql") {
+        return match &args.db {
+            Some(db_url) => db::get_db_project_manager(db_url)
+                .await
+                .expect("unable to connect to db"),
+            None => simple::get_json_project_manager(args.config.clone().into())
+                .expect("unable to load config"),
+        };
+    }
+    simple::get_json_project_manager(args.config.clone().into()).expect("unable to load config")
+}
 
 #[tokio::main]
-pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // TODO setup simple console output logger
     // For every connection, we must make a `Service` to handle all
     // incoming HTTP requests on said connection.
@@ -26,7 +106,7 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .with_level(log::LevelFilter::Info)
         .init()?;
 
-    let args = mars_rover::cli::Args::parse();
+    let args = cli::Args::parse();
     let project_handler = get_project_manager(&args).await;
 
     // let user_store: Box<Arc<UserStore>> = Box::new(Arc::new(UserStore::default()));

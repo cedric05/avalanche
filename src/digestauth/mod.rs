@@ -9,13 +9,13 @@ use tower::{Layer, Service, ServiceBuilder};
 
 // Credentials is not cloneable
 #[derive(Clone)]
-pub struct DigestAuth<S> {
+pub (crate) struct DigestAuth<S> {
     username: String,
     password: String,
-    pub inner: S,
+    pub (crate) inner: S,
 }
 
-pub struct DigestAuthLayer {
+pub (crate) struct DigestAuthLayer {
     username: String,
     password: String,
 }

@@ -12,14 +12,14 @@ use url::Url;
 
 // Credentials is not cloneable
 #[derive(Clone)]
-pub struct HawkAuth<S> {
+pub (crate) struct HawkAuth<S> {
     id: String,
     key: String,
     algorithm: DigestAlgorithm,
-    pub inner: S,
+    pub (crate) inner: S,
 }
 
-pub struct HawkAuthLayer {
+pub (crate) struct HawkAuthLayer {
     id: String,
     key: String,
     algorithm: DigestAlgorithm,

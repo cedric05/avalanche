@@ -56,7 +56,7 @@ impl ProjectHandler for SimpleProject {
 }
 
 #[derive(Clone)]
-pub struct SimpleProjectManager {
+pub (crate) struct SimpleProjectManager {
     projects: DashMap<String, Arc<Box<dyn ProjectHandler>>>,
 }
 
@@ -137,7 +137,7 @@ impl TryFrom<Value> for SimpleProjectManager {
     }
 }
 
-pub fn get_json_project_manager(path: PathBuf) -> Result<Arc<Box<dyn ProjectManager>>, MarsError> {
+pub (crate) fn get_json_project_manager(path: PathBuf) -> Result<Arc<Box<dyn ProjectManager>>, MarsError> {
     let mut file = fs::File::open(path)
         .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
     let mut config = String::new();

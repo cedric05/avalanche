@@ -18,7 +18,7 @@ use crate::error::MarsError;
 use crate::impl_proxy_service;
 
 #[derive(Clone)]
-pub struct AwsAuth<S> {
+pub (crate) struct AwsAuth<S> {
     access_key: String,
     secret_key: String,
     region: String,
@@ -26,7 +26,7 @@ pub struct AwsAuth<S> {
     inner: S,
 }
 
-pub struct AwsAuthLayer {
+pub (crate) struct AwsAuthLayer {
     access_key: String,
     secret_key: String,
     region: String,

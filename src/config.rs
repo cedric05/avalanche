@@ -7,15 +7,15 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::{error::MarsError, project::AVALANCHE_TOKEN};
-pub use mars_config::*;
+pub(crate) use mars_config::*;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct ServiceConfig {
-    pub url: String,
-    pub method: Method,
-    pub query_params: Vec<UrlParam>,
-    pub headers: Vec<Header>,
-    pub handler: ProxyParams,
+pub(crate) struct ServiceConfig {
+    pub(crate) url: String,
+    pub(crate) method: Method,
+    pub(crate) query_params: Vec<UrlParam>,
+    pub(crate) headers: Vec<Header>,
+    pub(crate) handler: ProxyParams,
 }
 
 lazy_static::lazy_static! {
@@ -32,7 +32,7 @@ lazy_static::lazy_static! {
     ];
 }
 impl ServiceConfig {
-    pub fn get_handler_config(&self, key: &str) -> Result<&str, MarsError> {
+    pub(crate) fn get_handler_config(&self, key: &str) -> Result<&str, MarsError> {
         self.handler
             .params
             .get(key)
@@ -48,11 +48,12 @@ impl ServiceConfig {
             })
     }
 
-    pub fn get_timeout(&self) -> Option<f64> {
+    #[allow(unused)]
+    pub(crate) fn get_timeout(&self) -> Option<f64> {
         self.handler.params.get("timeout").and_then(|x| x.as_f64())
     }
 
-    pub fn get_updated_request(
+    pub(crate) fn get_updated_request(
         &self,
         rest: &str,
         req: &mut Request<Body>,

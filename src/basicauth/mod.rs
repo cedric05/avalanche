@@ -12,18 +12,18 @@ use hyper_tls::HttpsConnector;
 use tower::{Layer, Service, ServiceBuilder};
 
 #[derive(Clone)]
-pub struct BasicAuth<S> {
+pub (crate) struct BasicAuth<S> {
     authentication: HeaderValue,
-    pub inner: S,
+    pub (crate) inner: S,
 }
 
-pub struct BasicAuthLayer {
+pub (crate) struct BasicAuthLayer {
     authentication: HeaderValue,
 }
 
 #[allow(unused)]
 impl BasicAuthLayer {
-    pub fn new(authentication: HeaderValue) -> Self {
+    pub (crate) fn new(authentication: HeaderValue) -> Self {
         BasicAuthLayer { authentication }
     }
 }
@@ -41,7 +41,7 @@ impl<S> Layer<S> for BasicAuthLayer {
 
 #[allow(unused)]
 impl BasicAuthLayer {
-    pub fn from_username_n_password(
+    pub (crate) fn from_username_n_password(
         username: &str,
         password: &str,
     ) -> Result<BasicAuthLayer, InvalidHeaderValue> {
@@ -117,7 +117,7 @@ mod test {
 
     use super::{BasicAuth, BasicAuthLayer};
 
-    pub trait ProxyService:
+    pub (crate) trait ProxyService:
         Service<
         Request<hyper::Body>,
         Response = Response<hyper::Body>,

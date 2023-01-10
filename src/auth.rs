@@ -18,7 +18,7 @@ use crate::x509::SslAuth;
 #[cfg(feature = "basicauth")]
 use crate::basicauth::BasicAuth;
 
-pub fn get_auth_service(
+pub (crate) fn get_auth_service(
     service_config: ServiceConfig,
 ) -> Result<(ServiceConfig, Box<dyn ProxyService>), MarsError> {
     match service_config.handler.handler_type.as_str() {

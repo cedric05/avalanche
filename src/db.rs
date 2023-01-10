@@ -10,7 +10,7 @@ use crate::config::ServiceConfig;
 use crate::project::{ProjectHandler, ProjectManager, ProxyService};
 
 #[derive(Clone)]
-pub struct DbProject {
+pub (crate) struct DbProject {
     name: String,
     project_id: i32,
     services: DashMap<String, (ServiceConfig, Box<dyn ProxyService>)>,
@@ -68,7 +68,7 @@ impl ProjectHandler for DbProject {
 }
 
 #[derive(Clone)]
-pub struct DbProjectManager {
+pub (crate) struct DbProjectManager {
     db_conn: DatabaseConnection,
     projects: DashMap<String, Arc<Box<dyn ProjectHandler>>>,
 }
@@ -107,7 +107,7 @@ impl ProjectManager for DbProjectManager {
     }
 }
 
-pub async fn get_db_project_manager(
+pub (crate) async fn get_db_project_manager(
     url: &str,
 ) -> Result<Arc<Box<dyn ProjectManager>>, Box<dyn Error>> {
     let db = Database::connect(url).await?;

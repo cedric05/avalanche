@@ -1,14 +1,14 @@
 use clap::Parser;
 
 #[derive(Parser)]
-pub struct Args {
+pub (crate) struct Args {
     #[clap(short, long, default_value = "config/config.json5")]
-    pub config: String,
+    pub (crate) config: String,
 
     #[cfg(feature = "sql")]
     #[clap(short, long)]
-    pub db: Option<String>,
+    pub (crate) db: Option<String>,
 
     #[clap(short, long, default_value = "localhost:3000")]
-    pub addr: String,
+    pub (crate) addr: String,
 }

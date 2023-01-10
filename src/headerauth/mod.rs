@@ -10,18 +10,18 @@ use serde::{Deserialize, Serialize};
 use tower::{Layer, Service, ServiceBuilder};
 
 #[derive(Clone)]
-pub struct HeaderAuth<S> {
+pub (crate) struct HeaderAuth<S> {
     header_map: HeaderMap<HeaderValue>,
-    pub inner: S,
+    pub (crate) inner: S,
 }
 
-pub struct HeaderAuthLayer {
+pub (crate) struct HeaderAuthLayer {
     header_map: HeaderMap<HeaderValue>,
 }
 
 #[allow(unused)]
 impl HeaderAuthLayer {
-    pub fn new(header_map: HeaderMap<HeaderValue>) -> Self {
+    pub (crate) fn new(header_map: HeaderMap<HeaderValue>) -> Self {
         HeaderAuthLayer { header_map }
     }
 }
@@ -39,7 +39,7 @@ impl<S> Layer<S> for HeaderAuthLayer {
 
 #[allow(unused)]
 impl HeaderAuthLayer {
-    pub fn from_header(header_map: HeaderMap<HeaderValue>) -> HeaderAuthLayer {
+    pub (crate) fn from_header(header_map: HeaderMap<HeaderValue>) -> HeaderAuthLayer {
         HeaderAuthLayer::new(header_map)
     }
 }
