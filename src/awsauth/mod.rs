@@ -7,7 +7,7 @@ use aws_sigv4::{http_request::SigningSettings, signing_params::Builder as Signpa
 
 use http::{Request, Response};
 
-use hyper::{body};
+use hyper::body;
 
 use tower::{Layer, Service};
 

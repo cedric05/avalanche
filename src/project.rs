@@ -42,7 +42,7 @@ pub(crate) trait ProjectHandler: Sync + Send + DynClone {
 
 clone_trait_object!(ProjectHandler);
 
-fn response_from_status_message(
+pub fn response_from_status_message(
     status: u16,
     message: String,
 ) -> Result<Response<Body>, Box<dyn Error>> {
@@ -120,7 +120,13 @@ pub(crate) trait ProjectManager: Sync + Send {
                             ))
                         })?;
                 request.extensions_mut().insert(ProxyUrlPath(url_rest));
-                return Ok(service_pair.value_mut().call(request).await.unwrap());
+                match service_pair.value_mut().call(request).await {
+                    Err(resp) => response_from_status_message(
+                        500,
+                        format!("request to proxy ran into error: `{}`", resp),
+                    ),
+                    Ok(resp) => Ok(resp),
+                }
             }
             None => return response_from_status_message(404, "project not found".into()),
         }

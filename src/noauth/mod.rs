@@ -1,7 +1,7 @@
 use std::{future::Future, pin::Pin};
 
 use http::{Request, Response};
-use tower::{Service, Layer};
+use tower::{Layer, Service};
 
 #[derive(Clone)]
 pub(crate) struct NoAuth<S> {

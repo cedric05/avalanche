@@ -2,7 +2,7 @@ use std::{error::Error, fmt::Display};
 
 #[allow(unused)]
 #[derive(Debug)]
-pub (crate) enum MarsError {
+pub(crate) enum MarsError {
     UrlError(String),
     ServiceConfigError(String),
     ServiceNotRegistered,

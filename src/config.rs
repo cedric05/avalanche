@@ -6,7 +6,10 @@ use serde::{Deserialize, Serialize};
 use tower::{Layer, Service};
 use url::Url;
 
-use crate::{error::MarsError, project::AVALANCHE_TOKEN};
+use crate::{
+    error::MarsError,
+    project::{response_from_status_message, AVALANCHE_TOKEN},
+};
 pub(crate) use mars_config::*;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -115,9 +118,7 @@ pub(crate) struct CommonUpdateQueryNHeaderLayer {
 
 impl CommonUpdateQueryNHeaderLayer {
     pub(crate) fn new(service_config: ServiceConfig) -> Self {
-        Self {
-            service_config: service_config,
-        }
+        Self { service_config }
     }
 }
 
@@ -132,7 +133,8 @@ impl<S> Layer<S> for CommonUpdateQueryNHeaderLayer {
     }
 }
 
-impl<ReqBody, ResBody, S> Service<Request<ReqBody>> for CommonUpdateQueryNHeaders<S>
+type ResBody = hyper::Body;
+impl<ReqBody, S> Service<Request<ReqBody>> for CommonUpdateQueryNHeaders<S>
 where
     S: Service<Request<ReqBody>, Response = Response<ResBody>>,
     S::Future: 'static,
@@ -151,10 +153,20 @@ where
 
     fn call(&mut self, mut req: Request<ReqBody>) -> Self::Future {
         let url: Option<String> = req.extensions().get::<ProxyUrlPath>().map(|x| x.0.clone());
-        self.service_config
-            .get_updated_request(&url.unwrap(), &mut req)
-            .unwrap();
-        let fut = self.inner.call(req);
-        Box::pin(async move { fut.await })
+        match self
+            .service_config
+            .get_updated_request(&url.expect("impossible to fail"), &mut req)
+        {
+            Ok(_) => {
+                let fut = self.inner.call(req);
+                Box::pin(async move { fut.await })
+            }
+            Err(error) => {
+                let message = format!("unable to transform request err: `{:?}`", error);
+                Box::pin(async move {
+                    Ok(response_from_status_message(500, message).expect("impossible to fail"))
+                })
+            }
+        }
     }
 }

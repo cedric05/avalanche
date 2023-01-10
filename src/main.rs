@@ -53,8 +53,8 @@ async fn main_service(
     // use uuid or some random generated
     let trace = uuid::Uuid::new_v4().to_string();
     request.headers_mut().insert(
-        HeaderName::from_str("avalanche-trace").unwrap(),
-        HeaderValue::from_str(&trace).unwrap(),
+        HeaderName::from_str("avalanche-trace").expect("impossible to fail"),
+        HeaderValue::from_str(&trace).expect("impossible to fail"),
     );
     let handle_request = project_handler.handle_request(
         request,
