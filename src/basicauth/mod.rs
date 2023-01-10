@@ -1,29 +1,25 @@
 use std::{convert::TryFrom, future::Future, pin::Pin};
 
-use crate::impl_proxy_service;
-
 use super::error::MarsError;
 
 use super::config::ServiceConfig;
 
 use http::{header::InvalidHeaderValue, HeaderValue, Request, Response};
-use hyper::{client::HttpConnector, Client};
-use hyper_tls::HttpsConnector;
-use tower::{Layer, Service, ServiceBuilder};
+use tower::{Layer, Service};
 
 #[derive(Clone)]
-pub (crate) struct BasicAuth<S> {
+pub(crate) struct BasicAuth<S> {
     authentication: HeaderValue,
-    pub (crate) inner: S,
+    pub(crate) inner: S,
 }
 
-pub (crate) struct BasicAuthLayer {
+pub(crate) struct BasicAuthLayer {
     authentication: HeaderValue,
 }
 
 #[allow(unused)]
 impl BasicAuthLayer {
-    pub (crate) fn new(authentication: HeaderValue) -> Self {
+    pub(crate) fn new(authentication: HeaderValue) -> Self {
         BasicAuthLayer { authentication }
     }
 }
@@ -41,7 +37,7 @@ impl<S> Layer<S> for BasicAuthLayer {
 
 #[allow(unused)]
 impl BasicAuthLayer {
-    pub (crate) fn from_username_n_password(
+    pub(crate) fn from_username_n_password(
         username: &str,
         password: &str,
     ) -> Result<BasicAuthLayer, InvalidHeaderValue> {
@@ -95,18 +91,6 @@ impl TryFrom<&ServiceConfig> for BasicAuthLayer {
     }
 }
 
-impl TryFrom<&ServiceConfig> for BasicAuth<Client<HttpsConnector<HttpConnector>>> {
-    type Error = MarsError;
-
-    fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let https = HttpsConnector::new();
-        let client = Client::builder().build::<_, hyper::Body>(https);
-        let auth_layer = BasicAuthLayer::try_from(value)?;
-        let res = ServiceBuilder::new().layer(auth_layer).service(client);
-        Ok(res)
-    }
-}
-
 #[cfg(test)]
 mod test {
     use http::{Request, Response, StatusCode};
@@ -117,7 +101,7 @@ mod test {
 
     use super::{BasicAuth, BasicAuthLayer};
 
-    pub (crate) trait ProxyService:
+    pub(crate) trait ProxyService:
         Service<
         Request<hyper::Body>,
         Response = Response<hyper::Body>,
@@ -145,5 +129,3 @@ mod test {
         assert_eq!(StatusCode::OK, response.status());
     }
 }
-
-impl_proxy_service!(BasicAuth);

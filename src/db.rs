@@ -1,4 +1,4 @@
-use crate::auth::get_auth_service;
+use crate::auth::{get_auth_service, ProxyService};
 
 use dashmap::{mapref::one::RefMut, DashMap};
 use sea_orm::{ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter};
@@ -7,13 +7,13 @@ use std::error::Error;
 use std::sync::Arc;
 
 use crate::config::ServiceConfig;
-use crate::project::{ProjectHandler, ProjectManager, ProxyService};
+use crate::project::{ProjectHandler, ProjectManager};
 
 #[derive(Clone)]
-pub (crate) struct DbProject {
+pub(crate) struct DbProject {
     name: String,
     project_id: i32,
-    services: DashMap<String, (ServiceConfig, Box<dyn ProxyService>)>,
+    services: DashMap<String, ProxyService>,
     needs_auth: bool,
     db_con: DatabaseConnection,
 }
@@ -27,8 +27,7 @@ impl ProjectHandler for DbProject {
     async fn get_service(
         &self,
         path: String,
-    ) -> Result<Option<RefMut<String, (ServiceConfig, Box<dyn ProxyService>)>>, Box<dyn Error>>
-    {
+    ) -> Result<Option<RefMut<String, ProxyService>>, Box<dyn Error>> {
         if self.services.contains_key(&path) {
             Ok(self.services.get_mut(&path))
         } else {
@@ -68,7 +67,7 @@ impl ProjectHandler for DbProject {
 }
 
 #[derive(Clone)]
-pub (crate) struct DbProjectManager {
+pub(crate) struct DbProjectManager {
     db_conn: DatabaseConnection,
     projects: DashMap<String, Arc<Box<dyn ProjectHandler>>>,
 }
@@ -107,7 +106,7 @@ impl ProjectManager for DbProjectManager {
     }
 }
 
-pub (crate) async fn get_db_project_manager(
+pub(crate) async fn get_db_project_manager(
     url: &str,
 ) -> Result<Arc<Box<dyn ProjectManager>>, Box<dyn Error>> {
     let db = Database::connect(url).await?;

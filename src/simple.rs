@@ -1,4 +1,4 @@
-use crate::auth::get_auth_service;
+use crate::auth::{get_auth_service, ProxyService};
 use crate::error::MarsError;
 
 use async_trait::async_trait;
@@ -13,13 +13,13 @@ use std::sync::Arc;
 use std::{convert::TryFrom, error::Error};
 
 use crate::config::ServiceConfig;
-use crate::project::{ProjectHandler, ProjectManager, ProxyService};
+use crate::project::{ProjectHandler, ProjectManager};
 
 #[derive(Clone)]
 struct SimpleProject {
     name: String,
     service_config_map: HashMap<String, ServiceConfig>,
-    services: DashMap<String, (ServiceConfig, Box<dyn ProxyService>)>,
+    services: DashMap<String, ProxyService>,
     needs_auth: bool,
 }
 
@@ -36,8 +36,7 @@ impl ProjectHandler for SimpleProject {
     async fn get_service(
         &self,
         path: String,
-    ) -> Result<Option<RefMut<String, (ServiceConfig, Box<dyn ProxyService>)>>, Box<dyn Error>>
-    {
+    ) -> Result<Option<RefMut<String, ProxyService>>, Box<dyn Error>> {
         if self.services.contains_key(&path) {
             Ok(self.services.get_mut(&path))
         } else if let Some(config) = self.service_config_map.get(&path).cloned() {
@@ -56,7 +55,7 @@ impl ProjectHandler for SimpleProject {
 }
 
 #[derive(Clone)]
-pub (crate) struct SimpleProjectManager {
+pub(crate) struct SimpleProjectManager {
     projects: DashMap<String, Arc<Box<dyn ProjectHandler>>>,
 }
 
@@ -137,7 +136,9 @@ impl TryFrom<Value> for SimpleProjectManager {
     }
 }
 
-pub (crate) fn get_json_project_manager(path: PathBuf) -> Result<Arc<Box<dyn ProjectManager>>, MarsError> {
+pub(crate) fn get_json_project_manager(
+    path: PathBuf,
+) -> Result<Arc<Box<dyn ProjectManager>>, MarsError> {
     let mut file = fs::File::open(path)
         .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
     let mut config = String::new();

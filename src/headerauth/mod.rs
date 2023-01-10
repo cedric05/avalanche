@@ -1,27 +1,25 @@
 use std::{future::Future, pin::Pin, str::FromStr};
 
-use crate::{error::MarsError, impl_proxy_service};
+use crate::error::MarsError;
 
 use super::config::ServiceConfig;
 use http::{header::HeaderName, HeaderMap, HeaderValue, Request, Response};
-use hyper::{client::HttpConnector, Client};
-use hyper_tls::HttpsConnector;
 use serde::{Deserialize, Serialize};
-use tower::{Layer, Service, ServiceBuilder};
+use tower::{Layer, Service};
 
 #[derive(Clone)]
-pub (crate) struct HeaderAuth<S> {
+pub(crate) struct HeaderAuth<S> {
     header_map: HeaderMap<HeaderValue>,
-    pub (crate) inner: S,
+    pub(crate) inner: S,
 }
 
-pub (crate) struct HeaderAuthLayer {
+pub(crate) struct HeaderAuthLayer {
     header_map: HeaderMap<HeaderValue>,
 }
 
 #[allow(unused)]
 impl HeaderAuthLayer {
-    pub (crate) fn new(header_map: HeaderMap<HeaderValue>) -> Self {
+    pub(crate) fn new(header_map: HeaderMap<HeaderValue>) -> Self {
         HeaderAuthLayer { header_map }
     }
 }
@@ -39,7 +37,7 @@ impl<S> Layer<S> for HeaderAuthLayer {
 
 #[allow(unused)]
 impl HeaderAuthLayer {
-    pub (crate) fn from_header(header_map: HeaderMap<HeaderValue>) -> HeaderAuthLayer {
+    pub(crate) fn from_header(header_map: HeaderMap<HeaderValue>) -> HeaderAuthLayer {
         HeaderAuthLayer::new(header_map)
     }
 }
@@ -128,17 +126,3 @@ impl TryFrom<&ServiceConfig> for HeaderAuthLayer {
         Ok(header_auth_layer)
     }
 }
-
-impl TryFrom<&ServiceConfig> for HeaderAuth<Client<HttpsConnector<HttpConnector>>> {
-    type Error = MarsError;
-
-    fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let https = HttpsConnector::new();
-        let client = Client::builder().build::<_, hyper::Body>(https);
-        let auth_layer = HeaderAuthLayer::try_from(value)?;
-        let res = ServiceBuilder::new().layer(auth_layer).service(client);
-        Ok(res)
-    }
-}
-
-impl_proxy_service!(HeaderAuth);

@@ -1,81 +1,83 @@
-use hyper::client::HttpConnector;
-use hyper::Client;
-use hyper_tls::HttpsConnector;
+use std::error::Error;
+use std::time::Duration;
 
-use crate::headerauth::HeaderAuth;
-use crate::noauth::NoAuth;
-use crate::{config::ServiceConfig, error::MarsError, project::ProxyService};
+use http::{Request, Response};
+use hyper::client::HttpConnector;
+use hyper::Body;
+use hyper_tls::HttpsConnector;
+use tower::ServiceBuilder;
+use tower_boxed_service_sync::BoxCloneSyncService;
+
+use crate::config::CommonUpdateQueryNHeaderLayer;
+use crate::headerauth::HeaderAuthLayer;
+use crate::{config::ServiceConfig, error::MarsError};
 
 #[cfg(feature = "awsauth")]
-use crate::awsauth::AwsAuth;
+use crate::awsauth::AwsAuthLayer;
 #[cfg(feature = "digestauth")]
-use crate::digestauth::DigestAuth;
+use crate::digestauth::DigestAuthLayer;
 #[cfg(feature = "hawkauth")]
-use crate::hawkauth::HawkAuth;
+use crate::hawkauth::HawkAuthLayer;
 #[cfg(feature = "x509auth")]
-use crate::x509::SslAuth;
+use crate::x509::ssl_auth_client_from_service_config;
 
 #[cfg(feature = "basicauth")]
-use crate::basicauth::BasicAuth;
+use crate::basicauth::BasicAuthLayer;
 
-pub (crate) fn get_auth_service(
-    service_config: ServiceConfig,
-) -> Result<(ServiceConfig, Box<dyn ProxyService>), MarsError> {
+fn simple_hyper_https_client() -> hyper::Client<hyper_tls::HttpsConnector<HttpConnector>> {
+    hyper::Client::builder().build::<_, hyper::Body>(HttpsConnector::new())
+}
+
+pub type ProxyService =
+    BoxCloneSyncService<Request<Body>, Response<Body>, Box<dyn Error + Send + Sync>>;
+
+pub(crate) fn get_auth_service(service_config: ServiceConfig) -> Result<ProxyService, MarsError> {
     match service_config.handler.handler_type.as_str() {
         #[cfg(feature = "basicauth")]
-        "basic_auth" => {
-            let basic_auth_service =
-                BasicAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(&service_config)?;
-            let basic_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
-                (service_config, Box::new(basic_auth_service));
-            Ok(basic_auth_config)
-        }
-        "header_auth" => {
-            let header_auth_service =
-                HeaderAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(&service_config)?;
-            let header_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
-                (service_config, Box::new(header_auth_service));
-            Ok(header_auth_config)
-        }
+        "basic_auth" => Ok(ServiceBuilder::new()
+            .layer(BoxCloneSyncService::layer())
+            .timeout(Duration::from_secs(10))
+            .layer(CommonUpdateQueryNHeaderLayer::new(service_config.clone()))
+            .layer(BasicAuthLayer::try_from(&service_config)?)
+            .service(simple_hyper_https_client())),
+        "header_auth" => Ok(ServiceBuilder::new()
+            .layer(BoxCloneSyncService::layer())
+            .timeout(Duration::from_secs(10))
+            .layer(CommonUpdateQueryNHeaderLayer::new(service_config.clone()))
+            .layer(HeaderAuthLayer::try_from(&service_config)?)
+            .service(simple_hyper_https_client())),
         #[cfg(feature = "awsauth")]
-        "aws_auth" => {
-            let aws_auth_service =
-                AwsAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(&service_config)?;
-            let aws_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
-                (service_config, Box::new(aws_auth_service));
-            Ok(aws_auth_config)
-        }
+        "aws_auth" => Ok(ServiceBuilder::new()
+            .layer(BoxCloneSyncService::layer())
+            .timeout(Duration::from_secs(10))
+            .layer(CommonUpdateQueryNHeaderLayer::new(service_config.clone()))
+            .layer(AwsAuthLayer::try_from(&service_config)?)
+            .service(simple_hyper_https_client())),
         #[cfg(feature = "x509auth")]
-        "x509" => {
-            let ssl_auth_service =
-                SslAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(&service_config)?;
-            let ssl_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
-                (service_config, Box::new(ssl_auth_service));
-            Ok(ssl_auth_config)
-        }
+        "x509" => Ok(ServiceBuilder::new()
+            .layer(BoxCloneSyncService::layer())
+            .timeout(Duration::from_secs(10))
+            .layer(CommonUpdateQueryNHeaderLayer::new(service_config.clone()))
+            .service(ssl_auth_client_from_service_config(&service_config)?)),
         #[cfg(feature = "hawkauth")]
-        "hawk_auth" => {
-            let hawk_auth_service =
-                HawkAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(&service_config)?;
-            let hawk_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
-                (service_config, Box::new(hawk_auth_service));
-            Ok(hawk_auth_config)
-        }
+        "hawk_auth" => Ok(ServiceBuilder::new()
+            .layer(BoxCloneSyncService::layer())
+            .timeout(Duration::from_secs(10))
+            .layer(CommonUpdateQueryNHeaderLayer::new(service_config.clone()))
+            .layer(HawkAuthLayer::try_from(&service_config)?)
+            .service(simple_hyper_https_client())),
         #[cfg(feature = "digestauth")]
-        "digest_auth" => {
-            let digest_auth_service =
-                DigestAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(&service_config)?;
-            let digest_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
-                (service_config, Box::new(digest_auth_service));
-            Ok(digest_auth_config)
-        }
-        "no_auth" => {
-            let no_auth_service =
-                NoAuth::<Client<HttpsConnector<HttpConnector>>>::try_from(&service_config)?;
-            let no_auth_config: (ServiceConfig, Box<dyn ProxyService>) =
-                (service_config, Box::new(no_auth_service));
-            Ok(no_auth_config)
-        }
+        "digest_auth" => Ok(ServiceBuilder::new()
+            .layer(BoxCloneSyncService::layer())
+            .timeout(Duration::from_secs(10))
+            .layer(CommonUpdateQueryNHeaderLayer::new(service_config.clone()))
+            .layer(DigestAuthLayer::try_from(&service_config)?)
+            .service(simple_hyper_https_client())),
+        "no_auth" => Ok(ServiceBuilder::new()
+            .layer(BoxCloneSyncService::layer())
+            .timeout(Duration::from_secs(10))
+            .layer(CommonUpdateQueryNHeaderLayer::new(service_config.clone()))
+            .service(simple_hyper_https_client())),
         _ => Err(MarsError::ServiceNotRegistered),
     }
 }

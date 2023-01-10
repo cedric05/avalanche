@@ -1,14 +1,10 @@
-use std::{convert::TryFrom, future::Future, pin::Pin};
+use std::{future::Future, pin::Pin};
 
 use http::{Request, Response};
-use hyper::{client::HttpConnector, Client};
-use hyper_tls::HttpsConnector;
-use tower::{Layer, Service, ServiceBuilder};
-
-use crate::{config::ServiceConfig, error::MarsError, impl_proxy_service};
+use tower::{Service, Layer};
 
 #[derive(Clone)]
-pub (crate) struct NoAuth<S> {
+pub(crate) struct NoAuth<S> {
     inner: S,
 }
 
@@ -44,15 +40,3 @@ where
         Box::pin(async { fut.await })
     }
 }
-
-impl TryFrom<&ServiceConfig> for NoAuth<Client<HttpsConnector<HttpConnector>>> {
-    type Error = MarsError;
-
-    fn try_from(_value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let client = hyper::Client::builder().build(HttpsConnector::new());
-        let service = ServiceBuilder::new().layer(NoAuthLayer).service(client);
-        Ok(service)
-    }
-}
-
-impl_proxy_service!(NoAuth);

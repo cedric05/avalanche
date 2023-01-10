@@ -1,0 +1,50 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'mars-rover'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=mars-rover",
+                    "--package=mars-rover"
+                ],
+                "filter": {
+                    "name": "mars-rover",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "--db",
+                "sqlite:///home/neptune/projects/personal/cedric05/mars-rover/db.sqlite",
+                "--addr",
+                "127.0.0.1:8080"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'mars-rover'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=mars-rover",
+                    "--package=mars-rover"
+                ],
+                "filter": {
+                    "name": "mars-rover",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

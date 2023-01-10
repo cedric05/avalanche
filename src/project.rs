@@ -1,13 +1,15 @@
-use std::{error::Error, future::Future, pin::Pin, sync::Arc};
+use std::{error::Error, sync::Arc};
 
 use async_trait::async_trait;
 use clap::Result;
 use dashmap::mapref::one::RefMut;
 use dyn_clone::{clone_trait_object, DynClone};
-use http::{Request, Response};
-use hyper::{service::Service, Body};
+use http::Response;
+use hyper::Body;
+use tower::Service;
 
-use crate::config::ServiceConfig;
+use crate::auth::ProxyService;
+use crate::config::ProxyUrlPath;
 use crate::error::MarsError;
 use crate::user::{
     AuthToken,
@@ -24,16 +26,16 @@ use crate::user::{
 ///
 ///
 
-pub (crate) const AVALANCHE_TOKEN: &str = "avalanche-token";
+pub(crate) const AVALANCHE_TOKEN: &str = "avalanche-token";
 
 #[async_trait]
-pub (crate) trait ProjectHandler: Sync + Send + DynClone {
+pub(crate) trait ProjectHandler: Sync + Send + DynClone {
     async fn is_project(&self, path: &str) -> bool;
 
     async fn get_service(
         &self,
         path: String,
-    ) -> Result<Option<RefMut<String, (ServiceConfig, Box<dyn ProxyService>)>>, Box<dyn Error>>;
+    ) -> Result<Option<RefMut<String, ProxyService>>, Box<dyn Error>>;
 
     async fn auth_configured(&self) -> bool;
 }
@@ -50,10 +52,10 @@ fn response_from_status_message(
 }
 
 #[async_trait]
-pub (crate) trait ProjectManager: Sync + Send {
+pub(crate) trait ProjectManager: Sync + Send {
     async fn handle_request(
         &self,
-        request: hyper::Request<Body>,
+        mut request: hyper::Request<Body>,
         user_token_store: Box<Arc<dyn UserTokenStore>>,
         auth_token_store: Box<Arc<dyn AuthTokenStore>>,
     ) -> Result<Response<Body>, Box<dyn Error>> {
@@ -107,19 +109,18 @@ pub (crate) trait ProjectManager: Sync + Send {
                     let url_rest = url_split.next().unwrap_or("");
                     (service_key, url_rest.to_owned())
                 };
-                let mut service_n_config = project
-                    .get_service(service.to_string())
-                    .await?
-                    .ok_or_else(|| {
-                        MarsError::ServiceConfigError(format!(
-                            "project `{}`'s subproject `{}` configured incorrectly or not",
-                            project_key, service_key
-                        ))
-                    })?;
-                let (service_config, service) = service_n_config.value_mut();
-                return service
-                    .handle_service(url_rest.as_str(), service_config, request)
-                    .await;
+                let mut service_pair =
+                    project
+                        .get_service(service.to_string())
+                        .await?
+                        .ok_or_else(|| {
+                            MarsError::ServiceConfigError(format!(
+                                "project `{}`'s subproject `{}` configured incorrectly or not",
+                                project_key, service_key
+                            ))
+                        })?;
+                request.extensions_mut().insert(ProxyUrlPath(url_rest));
+                return Ok(service_pair.value_mut().call(request).await.unwrap());
             }
             None => return response_from_status_message(404, "project not found".into()),
         }
@@ -129,25 +130,3 @@ pub (crate) trait ProjectManager: Sync + Send {
         project_key: String,
     ) -> Result<Option<Arc<Box<dyn ProjectHandler>>>, Box<dyn Error>>;
 }
-
-#[async_trait]
-pub (crate) trait ProxyService:
-    Sync
-    + Send
-    + DynClone
-    + Service<
-        Request<Body>,
-        Response = Response<Body>,
-        Error = hyper::Error,
-        Future = Pin<Box<dyn Future<Output = Result<Response<Body>, hyper::Error>> + Send>>,
-    >
-{
-    async fn handle_service(
-        &mut self,
-        url: &str,
-        service_config: &ServiceConfig,
-        request: hyper::Request<Body>,
-    ) -> Result<Response<Body>, Box<dyn Error>>;
-}
-
-clone_trait_object!(ProxyService);

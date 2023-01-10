@@ -6,19 +6,16 @@ use aws_sigv4::http_request::{sign, SignableBody, SignableRequest};
 use aws_sigv4::{http_request::SigningSettings, signing_params::Builder as SignparamsBuilder};
 
 use http::{Request, Response};
-use hyper::client::HttpConnector;
 
-use hyper::{body, Client};
-use hyper_tls::HttpsConnector;
+use hyper::{body};
 
-use tower::{Layer, Service, ServiceBuilder};
+use tower::{Layer, Service};
 
 use crate::config::ServiceConfig;
 use crate::error::MarsError;
-use crate::impl_proxy_service;
 
 #[derive(Clone)]
-pub (crate) struct AwsAuth<S> {
+pub(crate) struct AwsAuth<S> {
     access_key: String,
     secret_key: String,
     region: String,
@@ -26,7 +23,7 @@ pub (crate) struct AwsAuth<S> {
     inner: S,
 }
 
-pub (crate) struct AwsAuthLayer {
+pub(crate) struct AwsAuthLayer {
     access_key: String,
     secret_key: String,
     region: String,
@@ -126,18 +123,6 @@ impl TryFrom<&ServiceConfig> for AwsAuthLayer {
     }
 }
 
-impl TryFrom<&ServiceConfig> for AwsAuth<Client<HttpsConnector<HttpConnector>>> {
-    type Error = MarsError;
-
-    fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let https = HttpsConnector::new();
-        let client = Client::builder().build::<_, hyper::Body>(https);
-        let auth_layer = AwsAuthLayer::try_from(value)?;
-        let res = ServiceBuilder::new().layer(auth_layer).service(client);
-        Ok(res)
-    }
-}
-
 #[cfg(test)]
 mod test {
     use std::{borrow::Cow, error::Error, fmt, time::SystemTime};
@@ -227,5 +212,3 @@ mod test {
         haha()
     }
 }
-
-impl_proxy_service!(AwsAuth);

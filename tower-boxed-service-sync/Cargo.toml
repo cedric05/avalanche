@@ -1,0 +1,12 @@
+[package]
+name = "tower-boxed-service-sync"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tower = { version = "0.4", features = ["util"] }
+tower-layer = "0.3"
+tower-service = "0.3"
+futures-util = "0.3"

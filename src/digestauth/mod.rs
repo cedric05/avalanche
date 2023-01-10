@@ -1,21 +1,20 @@
 use super::config::ServiceConfig;
-use crate::{error::MarsError, impl_proxy_service};
+use crate::error::MarsError;
 use digest_auth::{AuthContext, HttpMethod};
 use http::{HeaderValue, Request, Response};
-use hyper::{body, client::HttpConnector, Client};
-use hyper_tls::HttpsConnector;
+use hyper::body;
 use std::{future::Future, pin::Pin};
-use tower::{Layer, Service, ServiceBuilder};
+use tower::{Layer, Service};
 
 // Credentials is not cloneable
 #[derive(Clone)]
-pub (crate) struct DigestAuth<S> {
+pub(crate) struct DigestAuth<S> {
     username: String,
     password: String,
-    pub (crate) inner: S,
+    pub(crate) inner: S,
 }
 
-pub (crate) struct DigestAuthLayer {
+pub(crate) struct DigestAuthLayer {
     username: String,
     password: String,
 }
@@ -128,17 +127,3 @@ impl TryFrom<&ServiceConfig> for DigestAuthLayer {
         })
     }
 }
-
-impl TryFrom<&ServiceConfig> for DigestAuth<Client<HttpsConnector<HttpConnector>>> {
-    type Error = MarsError;
-
-    fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let https = HttpsConnector::new();
-        let client = Client::builder().build::<_, hyper::Body>(https);
-        let auth_layer = DigestAuthLayer::try_from(value)?;
-        let res = ServiceBuilder::new().layer(auth_layer).service(client);
-        Ok(res)
-    }
-}
-
-impl_proxy_service!(DigestAuth);

@@ -1,9 +1,9 @@
-use std::{error::Error, str::FromStr};
+use std::{error::Error, future::Future, pin::Pin, str::FromStr};
 
-use http::{header::HeaderName, HeaderValue, Request, Uri};
-use hyper::Body;
+use http::{header::HeaderName, HeaderValue, Request, Response, Uri};
 use serde::{Deserialize, Serialize};
 
+use tower::{Layer, Service};
 use url::Url;
 
 use crate::{error::MarsError, project::AVALANCHE_TOKEN};
@@ -53,10 +53,10 @@ impl ServiceConfig {
         self.handler.params.get("timeout").and_then(|x| x.as_f64())
     }
 
-    pub(crate) fn get_updated_request(
+    pub(crate) fn get_updated_request<ReqBody>(
         &self,
         rest: &str,
-        req: &mut Request<Body>,
+        req: &mut Request<ReqBody>,
     ) -> Result<(), Box<dyn Error>> {
         let uri = Url::from_str(&self.url.clone())?;
         let uri = uri.join(rest)?;
@@ -80,5 +80,64 @@ impl ServiceConfig {
             headers_mut.remove(header);
         }
         Ok(())
+    }
+}
+
+pub(crate) struct ProxyUrlPath(pub String);
+
+#[derive(Clone)]
+pub(crate) struct CommonUpdateQueryNHeaders<S> {
+    service_config: ServiceConfig,
+    inner: S,
+}
+
+#[derive(Clone)]
+pub(crate) struct CommonUpdateQueryNHeaderLayer {
+    service_config: ServiceConfig,
+}
+
+impl CommonUpdateQueryNHeaderLayer {
+    pub(crate) fn new(service_config: ServiceConfig) -> Self {
+        Self {
+            service_config: service_config,
+        }
+    }
+}
+
+impl<S> Layer<S> for CommonUpdateQueryNHeaderLayer {
+    type Service = CommonUpdateQueryNHeaders<S>;
+
+    fn layer(&self, inner: S) -> Self::Service {
+        CommonUpdateQueryNHeaders {
+            service_config: self.service_config.clone(),
+            inner,
+        }
+    }
+}
+
+impl<ReqBody, ResBody, S> Service<Request<ReqBody>> for CommonUpdateQueryNHeaders<S>
+where
+    S: Service<Request<ReqBody>, Response = Response<ResBody>>,
+    S::Future: 'static,
+    <S as Service<Request<ReqBody>>>::Future: Send,
+{
+    type Response = S::Response;
+    type Error = S::Error;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+
+    fn poll_ready(
+        &mut self,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(cx)
+    }
+
+    fn call(&mut self, mut req: Request<ReqBody>) -> Self::Future {
+        let url: Option<String> = req.extensions().get::<ProxyUrlPath>().map(|x| x.0.clone());
+        self.service_config
+            .get_updated_request(&url.unwrap(), &mut req)
+            .unwrap();
+        let fut = self.inner.call(req);
+        Box::pin(async move { fut.await })
     }
 }

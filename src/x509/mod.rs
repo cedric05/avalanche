@@ -6,12 +6,12 @@ use hyper_tls::HttpsConnector;
 use native_tls::{Identity, TlsConnector};
 use tokio_native_tls::TlsConnector as TokioNativeTlsConnector;
 
-use tower::{Layer, Service, ServiceBuilder};
+use tower::{Layer, Service};
 
-use crate::{config::ServiceConfig, error::MarsError, impl_proxy_service};
+use crate::{config::ServiceConfig, error::MarsError};
 
 #[derive(Clone)]
-pub (crate) struct SslAuth<S> {
+pub(crate) struct SslAuth<S> {
     inner: S,
 }
 
@@ -64,27 +64,24 @@ where
     }
 }
 
-impl TryFrom<&ServiceConfig> for SslAuth<Client<HttpsConnector<HttpConnector>>> {
-    type Error = MarsError;
-
-    fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let identity = Identity::try_from(value)?;
-        let native_tls_connector =
-            TlsConnector::builder()
-                .identity(identity)
-                .build()
-                .map_err(|err| {
-                    MarsError::ServiceConfigError(format!("tlsbuild failed into error: {}", err))
-                })?;
-        let tokio_native_tls_connector = TokioNativeTlsConnector::from(native_tls_connector);
-        let mut http_connector = HttpConnector::new();
-        http_connector.enforce_http(false);
-        let https: HttpsConnector<HttpConnector> =
-            HttpsConnector::from((http_connector, tokio_native_tls_connector));
-        let client = Client::builder().build::<_, hyper::Body>(https);
-        let service = ServiceBuilder::new().layer(SslAuthLayer).service(client);
-        Ok(service)
-    }
+pub(crate) fn ssl_auth_client_from_service_config(
+    value: &ServiceConfig,
+) -> Result<Client<HttpsConnector<HttpConnector>>, MarsError> {
+    let identity = Identity::try_from(value)?;
+    let native_tls_connector =
+        TlsConnector::builder()
+            .identity(identity)
+            .build()
+            .map_err(|err| {
+                MarsError::ServiceConfigError(format!("tlsbuild failed into error: {}", err))
+            })?;
+    let tokio_native_tls_connector = TokioNativeTlsConnector::from(native_tls_connector);
+    let mut http_connector = HttpConnector::new();
+    http_connector.enforce_http(false);
+    let https: HttpsConnector<HttpConnector> =
+        HttpsConnector::from((http_connector, tokio_native_tls_connector));
+    let client = Client::builder().build::<_, hyper::Body>(https);
+    Ok(client)
 }
 
 #[cfg(test)]
@@ -101,7 +98,7 @@ mod test {
     const CERTIFICATE_P12: &str = "./resources/badssl.com-client.p12";
 
     #[tokio::test]
-    pub (crate) async fn test_certificate() -> Result<(), Box<dyn Error>> {
+    pub(crate) async fn test_certificate() -> Result<(), Box<dyn Error>> {
         let mut file = std::fs::File::open(CERTIFICATE_P12)?;
         let mut certificate_der = vec![];
         file.read_to_end(&mut certificate_der)?;
@@ -125,5 +122,3 @@ mod test {
         Ok(())
     }
 }
-
-impl_proxy_service!(SslAuth);

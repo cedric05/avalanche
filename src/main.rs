@@ -15,11 +15,9 @@ mod headerauth;
 mod noauth;
 mod project;
 mod simple;
+mod user;
 #[cfg(feature = "x509auth")]
 mod x509;
-#[macro_use]
-mod utils;
-mod user;
 
 mod auth;
 
