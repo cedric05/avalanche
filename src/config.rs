@@ -48,9 +48,26 @@ impl ServiceConfig {
             })
     }
 
-    #[allow(unused)]
+    // timeout for a request
     pub(crate) fn get_timeout(&self) -> Option<f64> {
         self.handler.params.get("timeout").and_then(|x| x.as_f64())
+    }
+
+    // allowed number of requests at a time
+    pub(crate) fn get_concurrency_timeout(&self) -> Option<f64> {
+        self.handler
+            .params
+            .get("concurrency_limit")
+            .and_then(|x| x.as_f64())
+    }
+
+    // allowed number of requests for one second duration
+    #[allow(unused)]
+    pub(crate) fn get_rate_timeout(&self) -> Option<f64> {
+        self.handler
+            .params
+            .get("rate_limit")
+            .and_then(|x| x.as_f64())
     }
 
     pub(crate) fn get_updated_request<ReqBody>(
