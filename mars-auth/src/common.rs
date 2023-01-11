@@ -40,29 +40,139 @@ impl<S> CommonUpdateQueryNHeaders<S> {
         rest: &str,
         req: &mut Request<ReqBody>,
     ) -> Result<(), Box<dyn Error>> {
-        let uri = Url::from_str(&self.service_config.url.clone())?;
-        let uri = uri.join(rest)?;
-        let params: Vec<(String, String)> = self
-            .service_config
-            .query_params
-            .iter()
-            .filter(|x| x.action == Action::Add)
-            .map(|x| (x.key.clone(), x.value.clone()))
-            .collect();
-        let uri: Url = Url::parse_with_params(uri.as_ref(), &params)?;
+        let service_config = &self.service_config;
+        let uri = get_updated_url(service_config, rest)?;
         *req.uri_mut() = Uri::from_str(uri.as_ref())?;
-        let headers_mut = req.headers_mut();
-        headers_mut.remove(AVALANCHE_TOKEN);
-        for header in &self.service_config.headers {
-            if header.action == Action::Add {
+        update_headers(req.headers_mut(), service_config)?;
+        Ok(())
+    }
+}
+
+fn get_updated_url(service_config: &ServiceConfig, rest: &str) -> Result<Url, Box<dyn Error>> {
+    let uri = Url::from_str(&service_config.url.clone())?;
+    let mut rest_path = uri.path().to_string();
+    if !rest_path.ends_with("/") {
+        rest_path.push('/');
+    }
+    let (mut path, query) = if rest.contains('?') {
+        let mut iter = rest.split('?');
+        let path = iter.next().unwrap();
+        let query = iter.next().unwrap();
+        (path.to_string(), query)
+    } else {
+        (rest.to_string(), "")
+    };
+    if path.starts_with('/') {
+        path.remove(0);
+    }
+    let mut url_query_pairs =
+        Vec::from_iter(url::form_urlencoded::parse(query.as_bytes()).into_owned());
+    url_query_pairs.append(&mut uri.query_pairs().into_owned().collect());
+    let join = uri.join(&rest_path);
+    let uri = join.and_then(|x| x.join(&path))?;
+    for url_param in &service_config.query_params {
+        match url_param.action {
+            Action::Add => {
+                url_query_pairs.push((url_param.key.clone(), url_param.value.clone()));
+            }
+            Action::Discard => url_query_pairs.retain_mut(|x| x.0 != url_param.key),
+            Action::Pass => {}
+        }
+    }
+    let uri: Url = Url::parse_with_params(uri.as_ref(), &url_query_pairs)?;
+    Ok(uri)
+}
+
+fn update_headers(
+    headers_mut: &mut http::HeaderMap,
+    service_config: &ServiceConfig,
+) -> Result<(), Box<dyn Error>> {
+    headers_mut.remove(AVALANCHE_TOKEN);
+    for header in &service_config.headers {
+        match header.action {
+            Action::Add => {
                 let key = HeaderName::from_str(&header.key)?;
                 headers_mut.append(key, HeaderValue::from_str(&header.value)?);
             }
+            Action::Discard => {
+                headers_mut.remove(HeaderName::from_str(&header.key)?);
+            }
+            Action::Pass => {}
         }
-        for header in HOP_HEADERS.iter() {
-            headers_mut.remove(header);
-        }
-        Ok(())
+    }
+    Ok(for header in HOP_HEADERS.iter() {
+        headers_mut.remove(header);
+    })
+}
+
+#[cfg(test)]
+mod test {
+    use mars_config::{GeneralParams, MarsAuth, ServiceConfig, UrlParam};
+    use serde_json::json;
+
+    use super::get_updated_url;
+
+    fn url_join(url: &str, rest: &str) -> String {
+        get_updated_url(
+            &ServiceConfig {
+                url: url.to_owned(),
+                method: mars_config::Method::ANY,
+                query_params: vec![
+                    UrlParam {
+                        key: "added".to_string(),
+                        value: "value".to_string(),
+                        action: mars_config::Action::Add,
+                    },
+                    UrlParam {
+                        key: "rajesh".to_string(),
+                        value: "".to_string(),
+                        action: mars_config::Action::Discard,
+                    },
+                    UrlParam {
+                        key: "haha".to_string(),
+                        value: "".to_string(),
+                        action: mars_config::Action::Discard,
+                    },
+                ],
+                headers: vec![],
+                auth: MarsAuth::new(json!({}), mars_config::AuthType::NoAuth),
+                params: GeneralParams::new(json!({})),
+            },
+            rest,
+        )
+        .unwrap()
+        .to_string()
+    }
+    #[test]
+    fn test_updated_url() {
+        assert_eq!(
+            "https://httpbin.org/first/second/third/?ranga=ramu&added=value",
+            url_join(
+                "https://httpbin.org/first/second?rajesh=ram",
+                "third/?ranga=ramu&haha=ere"
+            )
+        );
+        assert_eq!(
+            "https://httpbin.org/first/second/third/?ranga=ramu&added=value",
+            url_join(
+                "https://httpbin.org/first/second/?rajesh=ram",
+                "third/?ranga=ramu&haha=ere"
+            )
+        );
+        assert_eq!(
+            "https://httpbin.org/first/second/third/?ranga=ramu&added=value",
+            url_join(
+                "https://httpbin.org/first/second/?rajesh=ram",
+                "/third/?ranga=ramu&haha=ere"
+            )
+        );
+        assert_eq!(
+            "https://httpbin.org/first/second/third/?ranga=ramu&added=value",
+            url_join(
+                "https://httpbin.org/first/second/?rajesh=ram",
+                "/third/?ranga=ramu&haha=ere"
+            )
+        );
     }
 }
 

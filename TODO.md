@@ -34,7 +34,7 @@
 - [ ] Use database instead of settings
 
 # TODO Response
-- [ ] remove few headers from response
+- [x] remove few headers from response
 - [x] transform (json to xml, xml to json and few other)
 
 # TODO ADMIN

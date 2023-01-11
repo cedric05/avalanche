@@ -99,7 +99,7 @@ mod test {
     use tokio_native_tls::TlsConnector as TokioNativeTlsConnector;
 
     const BAD_SSL_PASSWORD: &str = "badssl.com";
-    const CERTIFICATE_P12: &str = "./resources/badssl.com-client.p12";
+    const CERTIFICATE_P12: &str = "../resources/badssl.com-client.p12";
 
     #[tokio::test]
     pub(crate) async fn test_certificate() -> Result<(), Box<dyn Error>> {
