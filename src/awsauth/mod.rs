@@ -9,6 +9,7 @@ use http::{Request, Response};
 
 use hyper::body;
 
+use serde::{Deserialize, Serialize};
 use tower::{Layer, Service};
 
 use crate::config::ServiceConfig;
@@ -109,24 +110,33 @@ where
     }
 }
 
+#[derive(Serialize, Deserialize)]
+struct AwsAuthParams {
+    access_key: String,
+    secret_key: String,
+    region: String,
+    service: String,
+    #[serde(default)]
+    sign_content: bool,
+}
+
 impl TryFrom<&ServiceConfig> for AwsAuthLayer {
     type Error = MarsError;
 
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let access_key = value.get_authparam_value_as_str("access_key")?;
-        let secret_key = value.get_authparam_value_as_str("secret_key")?;
-        let region = value.get_authparam_value_as_str("region")?;
-        let service = value.get_authparam_value_as_str("service")?;
-        let sign_content = value
-            .get_handler_value("sign_content")
-            .and_then(|x| x.as_bool())
-            .unwrap_or_default();
+        let aws_auth_params: AwsAuthParams = serde_json::from_value(value.auth.params.clone())
+            .map_err(|err| {
+                MarsError::ServiceConfigError(format!(
+                    "unable to parse auth params for aws auth configuration error:{}",
+                    err
+                ))
+            })?;
         let aws_auth_layer = AwsAuthLayer {
-            access_key: access_key.to_string(),
-            secret_key: secret_key.to_string(),
-            region: region.to_string(),
-            service_name: service.to_string(),
-            sign_content: sign_content,
+            access_key: aws_auth_params.access_key,
+            secret_key: aws_auth_params.secret_key,
+            region: aws_auth_params.region,
+            service_name: aws_auth_params.service,
+            sign_content: aws_auth_params.sign_content,
         };
         Ok(aws_auth_layer)
     }

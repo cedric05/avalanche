@@ -5,6 +5,7 @@ use crate::error::MarsError;
 use super::config::ServiceConfig;
 use hawk::{Credentials, DigestAlgorithm, Key, RequestBuilder};
 use http::{HeaderValue, Request, Response};
+use serde::{Deserialize, Serialize};
 use tower::{Layer, Service};
 use url::Url;
 
@@ -75,26 +76,43 @@ where
     }
 }
 
+#[derive(Serialize, Deserialize)]
+struct HawkAuthParams {
+    key: String,
+    id: String,
+    algorithm: Algorithm,
+}
+
+#[derive(Serialize, Deserialize)]
+
+enum Algorithm {
+    #[serde(rename = "sha256")]
+    Sha256,
+    #[serde(rename = "sha384")]
+    Sha384,
+    #[serde(rename = "sha512")]
+    Sha512,
+}
+
 impl TryFrom<&ServiceConfig> for HawkAuthLayer {
     type Error = MarsError;
 
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let key = value.get_authparam_value_as_str("key")?;
-        let id = value.get_authparam_value_as_str("id")?;
-        let algorithm = value.get_authparam_value_as_str("algorithm")?;
-        let algorithm = match algorithm {
-            "sha256" => DigestAlgorithm::Sha256,
-            "sha384" => DigestAlgorithm::Sha384,
-            "sha512" => DigestAlgorithm::Sha512,
-            _ => {
-                return Err(MarsError::ServiceConfigError(
-                    "unsupported algorithm for hawk auth".to_string(),
+        let hawk_auth_params: HawkAuthParams = serde_json::from_value(value.auth.params.clone())
+            .map_err(|err| {
+                MarsError::ServiceConfigError(format!(
+                    "unable to parse auth params for hawk auth configuration error:{}",
+                    err
                 ))
-            }
+            })?;
+        let algorithm = match hawk_auth_params.algorithm {
+            Algorithm::Sha256 => DigestAlgorithm::Sha256,
+            Algorithm::Sha384 => DigestAlgorithm::Sha384,
+            Algorithm::Sha512 => DigestAlgorithm::Sha512,
         };
         Ok(HawkAuthLayer {
-            id: id.to_string(),
-            key: key.to_string(),
+            id: hawk_auth_params.id,
+            key: hawk_auth_params.key,
             algorithm,
         })
     }

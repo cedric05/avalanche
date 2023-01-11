@@ -17,10 +17,8 @@ impl ActiveModelBehavior for ActiveModel {}
 
 #[cfg(test)]
 mod test {
-    use sea_orm::{sea_query::TableCreateStatement, ConnectionTrait, Database, Schema};
-    use serde_json::json;
-
     use super::*;
+    use sea_orm::{sea_query::TableCreateStatement, ConnectionTrait, Database, Schema};
 
     #[tokio::test]
     async fn haha() {
