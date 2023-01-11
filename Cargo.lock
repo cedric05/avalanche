@@ -1103,6 +1103,8 @@ dependencies = [
 name = "mars-entity"
 version = "0.1.0"
 dependencies = [
+ "clap",
+ "json5",
  "mars-config",
  "sea-orm",
  "serde",
