@@ -1,14 +1,8 @@
-use std::{convert::TryFrom, future::Future, pin::Pin};
+use std::{future::Future, pin::Pin};
 
 use http::{Request, Response};
-use hyper::{client::HttpConnector, Client};
-use hyper_tls::HttpsConnector;
-use native_tls::{Identity, TlsConnector};
-use tokio_native_tls::TlsConnector as TokioNativeTlsConnector;
 
 use tower::{Layer, Service};
-
-use crate::{config::ServiceConfig, error::MarsError};
 
 #[derive(Clone)]
 pub(crate) struct SslAuth<S> {
@@ -22,22 +16,6 @@ impl<S> Layer<S> for SslAuthLayer {
 
     fn layer(&self, inner: S) -> Self::Service {
         SslAuth { inner }
-    }
-}
-
-impl TryFrom<&ServiceConfig> for Identity {
-    type Error = MarsError;
-
-    fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let pkcs_der = value.get_authparam_value_as_str("pkcs12")?;
-        let password = value.get_authparam_value_as_str("pkcs12_password")?;
-        let pkcs_der = base64::decode(pkcs_der).map_err(|err| {
-            MarsError::ServiceConfigError(format!("unable to parse pkcs_der: {}", err))
-        })?;
-        let identity = Identity::from_pkcs12(&pkcs_der, password).map_err(|err| {
-            MarsError::ServiceConfigError(format!("unable to parse pkcs12 error: {}", err))
-        })?;
-        Ok(identity)
     }
 }
 
@@ -64,24 +42,50 @@ where
     }
 }
 
-pub(crate) fn ssl_auth_client_from_service_config(
-    value: &ServiceConfig,
-) -> Result<Client<HttpsConnector<HttpConnector>>, MarsError> {
-    let identity = Identity::try_from(value)?;
-    let native_tls_connector =
-        TlsConnector::builder()
-            .identity(identity)
-            .build()
-            .map_err(|err| {
-                MarsError::ServiceConfigError(format!("tlsbuild failed into error: {}", err))
-            })?;
-    let tokio_native_tls_connector = TokioNativeTlsConnector::from(native_tls_connector);
-    let mut http_connector = HttpConnector::new();
-    http_connector.enforce_http(false);
-    let https: HttpsConnector<HttpConnector> =
-        HttpsConnector::from((http_connector, tokio_native_tls_connector));
-    let client = Client::builder().build::<_, hyper::Body>(https);
-    Ok(client)
+#[cfg(feature = "config")]
+pub mod service_config {
+    use hyper::{client::HttpConnector, Client};
+    use hyper_tls::HttpsConnector;
+    use native_tls::{Identity, TlsConnector};
+    use tokio_native_tls::TlsConnector as TokioNativeTlsConnector;
+
+    use mars_config::{MarsError, ServiceConfig, ToMarsError};
+
+    pub fn get_identity(value: &ServiceConfig) -> Result<Identity, MarsError> {
+        let pkcs_der = value
+            .get_authparam_value_as_str("pkcs12")
+            .config_error("pkc12 not configured".into())?;
+        let password = value
+            .get_authparam_value_as_str("pkcs12_password")
+            .config_error("pkc12_password not configured".into())?;
+        let pkcs_der = base64::decode(pkcs_der).map_err(|err| {
+            MarsError::ServiceConfigError(format!("unable to parse pkcs_der: {}", err))
+        })?;
+        let identity = Identity::from_pkcs12(&pkcs_der, password).map_err(|err| {
+            MarsError::ServiceConfigError(format!("unable to parse pkcs12 error: {}", err))
+        })?;
+        Ok(identity)
+    }
+
+    pub(crate) fn ssl_auth_client_from_service_config(
+        value: &ServiceConfig,
+    ) -> Result<Client<HttpsConnector<HttpConnector>>, MarsError> {
+        let identity = get_identity(value)?;
+        let native_tls_connector =
+            TlsConnector::builder()
+                .identity(identity)
+                .build()
+                .map_err(|err| {
+                    MarsError::ServiceConfigError(format!("tlsbuild failed into error: {}", err))
+                })?;
+        let tokio_native_tls_connector = TokioNativeTlsConnector::from(native_tls_connector);
+        let mut http_connector = HttpConnector::new();
+        http_connector.enforce_http(false);
+        let https: HttpsConnector<HttpConnector> =
+            HttpsConnector::from((http_connector, tokio_native_tls_connector));
+        let client = Client::builder().build::<_, hyper::Body>(https);
+        Ok(client)
+    }
 }
 
 #[cfg(test)]

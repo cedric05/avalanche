@@ -9,11 +9,7 @@ use http::{Request, Response};
 
 use hyper::body;
 
-use serde::{Deserialize, Serialize};
 use tower::{Layer, Service};
-
-use crate::config::ServiceConfig;
-use crate::error::MarsError;
 
 #[derive(Clone)]
 pub(crate) struct AwsAuth<S> {
@@ -110,38 +106,46 @@ where
     }
 }
 
-#[derive(Serialize, Deserialize)]
-struct AwsAuthParams {
-    access_key: String,
-    secret_key: String,
-    region: String,
-    service: String,
-    #[serde(default)]
-    sign_content: bool,
-}
+#[cfg(feature = "config")]
+pub mod service_config {
+    use mars_config::MarsError;
+    use mars_config::ServiceConfig;
+    use serde::Deserialize;
+    use serde::Serialize;
 
-impl TryFrom<&ServiceConfig> for AwsAuthLayer {
-    type Error = MarsError;
+    use super::AwsAuthLayer;
+    #[derive(Serialize, Deserialize)]
+    struct AwsAuthParams {
+        access_key: String,
+        secret_key: String,
+        region: String,
+        service: String,
+        #[serde(default)]
+        sign_content: bool,
+    }
 
-    fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let aws_auth_params: AwsAuthParams = serde_json::from_value(value.auth.get_params())
-            .map_err(|err| {
-                MarsError::ServiceConfigError(format!(
-                    "unable to parse auth params for aws auth configuration error:{}",
-                    err
-                ))
-            })?;
-        let aws_auth_layer = AwsAuthLayer {
-            access_key: aws_auth_params.access_key,
-            secret_key: aws_auth_params.secret_key,
-            region: aws_auth_params.region,
-            service_name: aws_auth_params.service,
-            sign_content: aws_auth_params.sign_content,
-        };
-        Ok(aws_auth_layer)
+    impl TryFrom<&ServiceConfig> for AwsAuthLayer {
+        type Error = MarsError;
+
+        fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
+            let aws_auth_params: AwsAuthParams = serde_json::from_value(value.auth.get_params())
+                .map_err(|err| {
+                    MarsError::ServiceConfigError(format!(
+                        "unable to parse auth params for aws auth configuration error:{}",
+                        err
+                    ))
+                })?;
+            let aws_auth_layer = AwsAuthLayer {
+                access_key: aws_auth_params.access_key,
+                secret_key: aws_auth_params.secret_key,
+                region: aws_auth_params.region,
+                service_name: aws_auth_params.service,
+                sign_content: aws_auth_params.sign_content,
+            };
+            Ok(aws_auth_layer)
+        }
     }
 }
-
 #[cfg(test)]
 mod test {
     use std::{borrow::Cow, error::Error, fmt, time::SystemTime};

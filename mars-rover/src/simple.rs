@@ -1,5 +1,4 @@
 use crate::auth::{get_auth_service, ProxyService};
-use crate::error::MarsError;
 
 use async_trait::async_trait;
 use dashmap::{mapref::one::RefMut, DashMap};
@@ -12,8 +11,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::{convert::TryFrom, error::Error};
 
-use crate::config::ServiceConfig;
 use crate::project::{ProjectHandler, ProjectManager};
+use mars_config::{MarsError, ServiceConfig};
 
 #[derive(Clone)]
 struct SimpleProject {

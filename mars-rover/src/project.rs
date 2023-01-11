@@ -6,17 +6,16 @@ use dashmap::mapref::one::RefMut;
 use dyn_clone::{clone_trait_object, DynClone};
 use http::Response;
 use hyper::Body;
-use tower::Service;
+use mars_config::{MarsError, AVALANCHE_TOKEN};
 
-use crate::auth::ProxyService;
-use crate::config::ProxyUrlPath;
-use crate::error::MarsError;
 use crate::user::{
     AuthToken,
     AuthTokenStore,
     //UserStore,
     UserTokenStore,
 };
+use hyper::service::Service;
+use mars_auth::{response_from_status_message, ProxyService, ProxyUrlPath};
 
 /// project
 /// project has two main variables
@@ -25,8 +24,6 @@ use crate::user::{
 ///
 ///
 ///
-
-pub(crate) const AVALANCHE_TOKEN: &str = "avalanche-token";
 
 #[async_trait]
 pub(crate) trait ProjectHandler: Sync + Send + DynClone {
@@ -41,15 +38,6 @@ pub(crate) trait ProjectHandler: Sync + Send + DynClone {
 }
 
 clone_trait_object!(ProjectHandler);
-
-pub fn response_from_status_message(
-    status: u16,
-    message: String,
-) -> Result<Response<Body>, Box<dyn Error>> {
-    Ok(Response::builder()
-        .status(status)
-        .body(Body::from(message))?)
-}
 
 #[async_trait]
 pub(crate) trait ProjectManager: Sync + Send {

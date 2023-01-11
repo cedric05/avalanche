@@ -1,5 +1,12 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+mod config;
+mod error;
+
+pub use config::ServiceConfig;
+pub use error::*;
+
+pub const AVALANCHE_TOKEN: &str = "avalanche-token";
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum Action {

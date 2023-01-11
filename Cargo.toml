@@ -4,5 +4,43 @@ members = [
     "mars-rover",
     "mars-config",
     "mars-entity",
+    "mars-auth",
     "tower-boxed-service-sync",
 ]
+
+[workspace.dependencies]
+async-trait = "0.1"
+aws-sigv4 = { version = "0.48" }
+base64 = { version = "0.13" }
+bytes = "1.2"
+clap = { version = "3.2", features = ["derive"] }
+dashmap = "5.4"
+digest_auth = { version = "0.3" }
+dyn-clone = "1.0"
+futures-util = "0.3"
+hawk = { version = "4.0", features = ["use_openssl"], default-features = false }
+http = "0.2"
+http-body = "0.4"
+hyper = { version = "0.14", features = ["full"] }
+hyper-tls = "0.5"
+json5 = "0.4"
+lazy_static = "1.4"
+log = "0.4"
+native-tls = { version = "0.2" }
+regex = "1.6"
+sea-orm = { version = "0.9", features = [
+    "sqlx-sqlite",
+    "runtime-tokio-native-tls",
+] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+simple_logger = "4.0"
+time = "0.3"
+tokio = { version = "1.20", features = ["full"] }
+tokio-native-tls = "0.3"
+tower = { version = "0.4", features = ["timeout", "limit"] }
+tower-http = { version = "0.3", features = ["decompression-br", "set-header"] }
+tower-layer = "0.3"
+tower-service = "0.3"
+url = "2.2"
+uuid = "1.2"

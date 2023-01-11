@@ -2,7 +2,7 @@ use std::{error::Error, fmt::Display};
 
 #[allow(unused)]
 #[derive(Debug)]
-pub(crate) enum MarsError {
+pub enum MarsError {
     UrlError(String),
     ServiceConfigError(String),
     ServiceNotRegistered,
@@ -21,3 +21,17 @@ impl Display for MarsError {
 }
 
 impl std::error::Error for MarsError {}
+
+pub trait ToMarsError<T, E>
+where
+    T: Sized,
+    E: Sized,
+{
+    fn config_error(self, message: String) -> core::result::Result<E, MarsError>;
+}
+
+impl<T> ToMarsError<T, T> for Option<T> {
+    fn config_error(self, message: String) -> core::result::Result<T, MarsError> {
+        self.ok_or_else(|| MarsError::ServiceConfigError(message))
+    }
+}

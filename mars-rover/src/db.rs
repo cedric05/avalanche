@@ -1,14 +1,12 @@
 use crate::auth::{get_auth_service, ProxyService};
-use crate::error::MarsError;
-
 use dashmap::{mapref::one::RefMut, DashMap};
 use sea_orm::{ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter};
 
 use std::error::Error;
 use std::sync::Arc;
 
-use crate::config::ServiceConfig;
 use crate::project::{ProjectHandler, ProjectManager};
+use mars_config::{MarsError, ServiceConfig};
 
 #[derive(Clone)]
 pub(crate) struct DbProject {

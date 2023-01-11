@@ -1,11 +1,6 @@
-use std::{convert::TryFrom, future::Future, pin::Pin};
-
-use super::error::MarsError;
-
-use super::config::ServiceConfig;
+use std::{future::Future, pin::Pin};
 
 use http::{header::InvalidHeaderValue, HeaderValue, Request, Response};
-use serde::{Deserialize, Serialize};
 use tower::{Layer, Service};
 
 #[derive(Clone)]
@@ -76,34 +71,42 @@ where
     }
 }
 
-#[derive(Serialize, Deserialize)]
-struct BasicAuthParams {
-    username: String,
-    password: String,
-}
+#[cfg(feature = "config")]
+pub mod service_config {
+    use mars_config::{MarsError, ServiceConfig};
+    use serde::{Deserialize, Serialize};
 
-impl TryFrom<&ServiceConfig> for BasicAuthLayer {
-    type Error = MarsError;
+    use super::BasicAuthLayer;
 
-    fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let basic_auth_params: BasicAuthParams = serde_json::from_value(value.auth.get_params())
-            .map_err(|err| {
+    #[derive(Serialize, Deserialize)]
+    struct BasicAuthParams {
+        username: String,
+        password: String,
+    }
+
+    impl TryFrom<&ServiceConfig> for BasicAuthLayer {
+        type Error = MarsError;
+
+        fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
+            let basic_auth_params: BasicAuthParams =
+                serde_json::from_value(value.auth.get_params()).map_err(|err| {
+                    MarsError::ServiceConfigError(format!(
+                        "unable to parse auth params for basic auth configuration error:{}",
+                        err
+                    ))
+                })?;
+            let basic_auth_layer = BasicAuthLayer::from_username_n_password(
+                basic_auth_params.username.as_str(),
+                basic_auth_params.password.as_str(),
+            )
+            .map_err(|_| {
                 MarsError::ServiceConfigError(format!(
-                    "unable to parse auth params for basic auth configuration error:{}",
-                    err
-                ))
-            })?;
-        let basic_auth_layer = BasicAuthLayer::from_username_n_password(
-            basic_auth_params.username.as_str(),
-            basic_auth_params.password.as_str(),
-        )
-        .map_err(|_| {
-            MarsError::ServiceConfigError(format!(
                 "unable to construct `Authorization: Basic` header from username: {}, password: {}",
                 basic_auth_params.username, basic_auth_params.password
             ))
-        })?;
-        Ok(basic_auth_layer)
+            })?;
+            Ok(basic_auth_layer)
+        }
     }
 }
 

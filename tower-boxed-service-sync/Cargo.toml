@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tower = { version = "0.4", features = ["util"] }
-tower-layer = "0.3"
-tower-service = "0.3"
-futures-util = "0.3"
+futures-util = { workspace = true }
+tower = { workspace = true, features = ["util"] }
+tower-layer = { workspace = true }
+tower-service = { workspace = true }

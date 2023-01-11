@@ -1,11 +1,7 @@
 use std::{future::Future, pin::Pin};
 
-use crate::error::MarsError;
-
-use super::config::ServiceConfig;
 use hawk::{Credentials, DigestAlgorithm, Key, RequestBuilder};
 use http::{HeaderValue, Request, Response};
-use serde::{Deserialize, Serialize};
 use tower::{Layer, Service};
 use url::Url;
 
@@ -75,45 +71,51 @@ where
         Box::pin(async move { fut.await })
     }
 }
+#[cfg(feature = "config")]
+pub mod service_config {
+    use super::HawkAuthLayer;
+    use hawk::DigestAlgorithm;
+    use mars_config::{MarsError, ServiceConfig};
+    use serde::{Deserialize, Serialize};
+    #[derive(Serialize, Deserialize)]
+    struct HawkAuthParams {
+        key: String,
+        id: String,
+        algorithm: Algorithm,
+    }
 
-#[derive(Serialize, Deserialize)]
-struct HawkAuthParams {
-    key: String,
-    id: String,
-    algorithm: Algorithm,
-}
+    #[derive(Serialize, Deserialize)]
 
-#[derive(Serialize, Deserialize)]
+    enum Algorithm {
+        #[serde(rename = "sha256")]
+        Sha256,
+        #[serde(rename = "sha384")]
+        Sha384,
+        #[serde(rename = "sha512")]
+        Sha512,
+    }
 
-enum Algorithm {
-    #[serde(rename = "sha256")]
-    Sha256,
-    #[serde(rename = "sha384")]
-    Sha384,
-    #[serde(rename = "sha512")]
-    Sha512,
-}
+    impl TryFrom<&ServiceConfig> for HawkAuthLayer {
+        type Error = MarsError;
 
-impl TryFrom<&ServiceConfig> for HawkAuthLayer {
-    type Error = MarsError;
-
-    fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let hawk_auth_params: HawkAuthParams = serde_json::from_value(value.auth.get_params())
-            .map_err(|err| {
-                MarsError::ServiceConfigError(format!(
-                    "unable to parse auth params for hawk auth configuration error:{}",
-                    err
-                ))
-            })?;
-        let algorithm = match hawk_auth_params.algorithm {
-            Algorithm::Sha256 => DigestAlgorithm::Sha256,
-            Algorithm::Sha384 => DigestAlgorithm::Sha384,
-            Algorithm::Sha512 => DigestAlgorithm::Sha512,
-        };
-        Ok(HawkAuthLayer {
-            id: hawk_auth_params.id,
-            key: hawk_auth_params.key,
-            algorithm,
-        })
+        fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
+            let hawk_auth_params: HawkAuthParams = serde_json::from_value(value.auth.get_params())
+                .map_err(|err| {
+                    MarsError::ServiceConfigError(format!(
+                        "unable to parse auth params for hawk auth configuration error:{}",
+                        err
+                    ))
+                })?;
+            let algorithm = match hawk_auth_params.algorithm {
+                Algorithm::Sha256 => DigestAlgorithm::Sha256,
+                Algorithm::Sha384 => DigestAlgorithm::Sha384,
+                Algorithm::Sha512 => DigestAlgorithm::Sha512,
+            };
+            Ok(HawkAuthLayer {
+                id: hawk_auth_params.id,
+                key: hawk_auth_params.key,
+                algorithm,
+            })
+        }
     }
 }

@@ -1,29 +1,23 @@
-use std::{error::Error, future::Future, pin::Pin, str::FromStr};
+use std::{future::Future, pin::Pin, str::FromStr};
 
-use http::{header::HeaderName, HeaderValue, Request, Response, Uri};
-use serde::{Deserialize, Serialize};
-
+use http::{Request, Response};
+use hyper::Body;
+use mars_config::{ServiceConfig, AVALANCHE_TOKEN};
 use tower::{Layer, Service};
+
+use http::{header::HeaderName, HeaderValue, Uri};
+use mars_config::Action;
+use std::error::Error;
+
 use url::Url;
 
-use crate::{
-    error::MarsError,
-    project::{response_from_status_message, AVALANCHE_TOKEN},
-};
-pub(crate) use mars_config::*;
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub(crate) struct ServiceConfig {
-    pub(crate) url: String,
-    pub(crate) method: Method,
-    #[serde(default)]
-    pub(crate) query_params: Vec<UrlParam>,
-    #[serde(default)]
-    pub(crate) headers: Vec<Header>,
-    #[serde(default)]
-    pub(crate) auth: MarsAuth,
-    #[serde(default)]
-    pub(crate) params: GeneralParams,
+pub fn response_from_status_message(
+    status: u16,
+    message: String,
+) -> Result<Response<Body>, Box<dyn Error>> {
+    Ok(Response::builder()
+        .status(status)
+        .body(Body::from(message))?)
 }
 
 lazy_static::lazy_static! {
@@ -39,42 +33,25 @@ lazy_static::lazy_static! {
         HeaderName::from_str("Host").unwrap(),
     ];
 }
-impl ServiceConfig {
-    pub(crate) fn get_authparam_value_as_str(&self, key: &str) -> Result<&str, MarsError> {
-        self.auth
-            .get_param(key)
-            .and_then(|x| x.as_str())
-            .ok_or_else(|| {
-                MarsError::ServiceConfigError(format!("service config `{}` not found", key))
-            })
-    }
 
-    // timeout for a request
-    pub(crate) fn get_timeout(&self) -> Option<f64> {
-        self.params.get_value("timeout").and_then(|x| x.as_f64())
-    }
+pub struct ProxyUrlPath(pub String);
 
-    // allowed number of requests at a time
-    pub(crate) fn get_concurrency_timeout(&self) -> Option<f64> {
-        self.params
-            .get_value("concurrency_limit")
-            .and_then(|x| x.as_f64())
-    }
+#[derive(Clone)]
+pub struct CommonUpdateQueryNHeaders<S> {
+    service_config: ServiceConfig,
+    inner: S,
+}
 
-    // allowed number of requests for one second duration
-    #[allow(unused)]
-    pub(crate) fn get_rate_timeout(&self) -> Option<f64> {
-        self.params.get_value("rate_limit").and_then(|x| x.as_f64())
-    }
-
+impl<S> CommonUpdateQueryNHeaders<S> {
     pub(crate) fn get_updated_request<ReqBody>(
         &self,
         rest: &str,
         req: &mut Request<ReqBody>,
     ) -> Result<(), Box<dyn Error>> {
-        let uri = Url::from_str(&self.url.clone())?;
+        let uri = Url::from_str(&self.service_config.url.clone())?;
         let uri = uri.join(rest)?;
         let params: Vec<(String, String)> = self
+            .service_config
             .query_params
             .iter()
             .filter(|x| x.action == Action::Add)
@@ -84,7 +61,7 @@ impl ServiceConfig {
         *req.uri_mut() = Uri::from_str(uri.as_ref())?;
         let headers_mut = req.headers_mut();
         headers_mut.remove(AVALANCHE_TOKEN);
-        for header in &self.headers {
+        for header in &self.service_config.headers {
             if header.action == Action::Add {
                 let key = HeaderName::from_str(&header.key)?;
                 headers_mut.append(key, HeaderValue::from_str(&header.value)?);
@@ -97,21 +74,13 @@ impl ServiceConfig {
     }
 }
 
-pub(crate) struct ProxyUrlPath(pub String);
-
 #[derive(Clone)]
-pub(crate) struct CommonUpdateQueryNHeaders<S> {
-    service_config: ServiceConfig,
-    inner: S,
-}
-
-#[derive(Clone)]
-pub(crate) struct CommonUpdateQueryNHeaderLayer {
+pub struct CommonUpdateQueryNHeaderLayer {
     service_config: ServiceConfig,
 }
 
 impl CommonUpdateQueryNHeaderLayer {
-    pub(crate) fn new(service_config: ServiceConfig) -> Self {
+    pub fn new(service_config: ServiceConfig) -> Self {
         Self { service_config }
     }
 }
@@ -147,10 +116,7 @@ where
 
     fn call(&mut self, mut req: Request<ReqBody>) -> Self::Future {
         let url: Option<String> = req.extensions().get::<ProxyUrlPath>().map(|x| x.0.clone());
-        match self
-            .service_config
-            .get_updated_request(&url.expect("impossible to fail"), &mut req)
-        {
+        match self.get_updated_request(&url.expect("impossible to fail"), &mut req) {
             Ok(_) => {
                 let fut = self.inner.call(req);
                 Box::pin(async move { fut.await })

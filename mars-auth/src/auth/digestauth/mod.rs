@@ -1,9 +1,6 @@
-use super::config::ServiceConfig;
-use crate::error::MarsError;
 use digest_auth::{AuthContext, HttpMethod};
 use http::{HeaderValue, Request, Response};
 use hyper::body;
-use serde::{Deserialize, Serialize};
 use std::{future::Future, pin::Pin};
 use tower::{Layer, Service};
 
@@ -116,26 +113,33 @@ where
     }
 }
 
-#[derive(Serialize, Deserialize)]
-struct DigestAuthParams {
-    username: String,
-    password: String,
-}
+#[cfg(feature = "config")]
+pub mod service_config {
+    use super::DigestAuthLayer;
+    use mars_config::{MarsError, ServiceConfig};
+    use serde::{Deserialize, Serialize};
 
-impl TryFrom<&ServiceConfig> for DigestAuthLayer {
-    type Error = MarsError;
+    #[derive(Serialize, Deserialize)]
+    struct DigestAuthParams {
+        username: String,
+        password: String,
+    }
 
-    fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let digest_auth_params: DigestAuthParams = serde_json::from_value(value.auth.get_params())
-            .map_err(|err| {
-                MarsError::ServiceConfigError(format!(
-                    "unable to parse auth params for digest auth configuration error:{}",
-                    err
-                ))
-            })?;
-        Ok(DigestAuthLayer {
-            username: digest_auth_params.username.to_string(),
-            password: digest_auth_params.password.to_string(),
-        })
+    impl TryFrom<&ServiceConfig> for DigestAuthLayer {
+        type Error = MarsError;
+
+        fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
+            let digest_auth_params: DigestAuthParams =
+                serde_json::from_value(value.auth.get_params()).map_err(|err| {
+                    MarsError::ServiceConfigError(format!(
+                        "unable to parse auth params for digest auth configuration error:{}",
+                        err
+                    ))
+                })?;
+            Ok(DigestAuthLayer {
+                username: digest_auth_params.username.to_string(),
+                password: digest_auth_params.password.to_string(),
+            })
+        }
     }
 }

@@ -1,25 +1,9 @@
-#[cfg(feature = "awsauth")]
-mod awsauth;
-#[cfg(feature = "basicauth")]
-mod basicauth;
 mod cli;
-mod config;
 #[cfg(feature = "sql")]
 mod db;
-#[cfg(feature = "digestauth")]
-mod digestauth;
-mod error;
-#[cfg(feature = "hawkauth")]
-mod hawkauth;
-mod headerauth;
-mod noauth;
 mod project;
 mod simple;
 mod user;
-#[cfg(feature = "x509auth")]
-mod x509;
-
-mod auth;
 
 use std::convert::Infallible;
 use std::net::SocketAddr;
@@ -41,6 +25,8 @@ use user::{
 use http::{header::HeaderName, HeaderValue, Request, Response};
 use hyper::Body;
 use project::ProjectManager;
+
+pub use mars_auth as auth;
 
 async fn main_service(
     mut request: Request<Body>,

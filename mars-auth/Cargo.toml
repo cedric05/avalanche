@@ -1,0 +1,47 @@
+[package]
+name = "mars-auth"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+aws-sigv4 = { optional = true, workspace = true }
+base64 = { optional = true, workspace = true }
+digest_auth = { optional = true, workspace = true }
+hawk = { features = [
+    "use_openssl",
+], default-features = false, optional = true, workspace = true }
+http = { workspace = true }
+hyper = { workspace = true, features = ["full"] }
+hyper-tls = { workspace = true }
+lazy_static = { workspace = true }
+mars-config = { path = "../mars-config", optional = true }
+native-tls = { optional = true, workspace = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+tokio-native-tls = { optional = true, workspace = true }
+tower = { workspace = true }
+tower-boxed-service-sync = { path = "../tower-boxed-service-sync", optional = true }
+url = { workspace = true }
+[dev-dependencies]
+tokio = { features = ["full"], workspace = true }
+time = { workspace = true }
+
+
+[features]
+awsauth = ["aws-sigv4"]
+hawkauth = ["hawk"]
+x509auth = ["native-tls", "base64", "tokio-native-tls"]
+digestauth = ["digest_auth"]
+basicauth = ["base64"]
+config = [
+    "tower-boxed-service-sync",
+    "tower/timeout",
+    "tower/limit",
+    "serde_json",
+    "serde",
+    "mars-config",
+]
+default = []
