@@ -1,59 +1,8 @@
-[package]
-name = "mars-rover"
-version = "0.1.0"
-edition = "2021"
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-async-trait = "0.1.57"
-aws-sigv4 = { version = "0.48.0", optional = true }
-base64 = { version = "0.13.0", optional = true }
-bytes = "1.2.1"
-clap = { version = "3.2.22", features = ["derive"] }
-dashmap = "5.4.0"
-digest_auth = { version = "0.3.0", optional = true }
-dyn-clone = "1.0.9"
-hawk = { version = "4.0.0", features = [
-    "use_openssl",
-], default-features = false, optional = true }
-http = "0.2.8"
-log = "0.4.17"
-http-body = "0.4.5"
-hyper = { version = "0.14.20", features = ["full"] }
-hyper-tls = "0.5.0"
-json5 = "0.4.1"
-lazy_static = "1.4.0"
-native-tls = { version = "0.2.10", optional = true }
-pin-project = "1.0.12"
-regex = "1.6.0"
-serde = { version = "1.0.144", features = ["derive"] }
-serde_json = "1.0.85"
-time = "0.3.14"
-tokio = { version = "1.20.1", features = ["full"] }
-tokio-native-tls = "0.3.0"
-tower = { version = "0.4", features = ["timeout", "limit"] }
-tower-http = { version = "0.3.4", features = [
-    "decompression-br",
-    "set-header",
-] }
-url = "2.2.2"
-simple_logger = "4.0.0"
-mars-entity = { path = "./mars-entity", optional = true }
-mars-config = { path = "./mars-config" }
-sea-orm = { version = "0.9", features = [
-    "sqlx-sqlite",
-    "runtime-tokio-native-tls",
-], optional = true }
-uuid = "1.2.2"
-tower-boxed-service-sync = { path = "./tower-boxed-service-sync" }
-
-
-[features]
-awsauth = ["aws-sigv4"]
-hawkauth = ["hawk"]
-x509auth = ["native-tls"]
-digestauth = ["digest_auth"]
-basicauth = ["base64"]
-default = ["awsauth", "hawkauth", "x509auth", "digestauth", "basicauth", "sql"]
-sql = ["mars-entity", "sea-orm"]
+members = [
+    "mars-rover",
+    "mars-config",
+    "mars-entity",
+    "tower-boxed-service-sync",
+]
