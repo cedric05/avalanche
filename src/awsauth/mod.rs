@@ -113,12 +113,12 @@ impl TryFrom<&ServiceConfig> for AwsAuthLayer {
     type Error = MarsError;
 
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let access_key = value.get_handler_config("access_key")?;
-        let secret_key = value.get_handler_config("secret_key")?;
-        let region = value.get_handler_config("region")?;
-        let service = value.get_handler_config("service")?;
+        let access_key = value.get_authparam_value_as_str("access_key")?;
+        let secret_key = value.get_authparam_value_as_str("secret_key")?;
+        let region = value.get_authparam_value_as_str("region")?;
+        let service = value.get_authparam_value_as_str("service")?;
         let sign_content = value
-            .get_param_value("sign_content")
+            .get_handler_value("sign_content")
             .and_then(|x| x.as_bool())
             .unwrap_or_default();
         let aws_auth_layer = AwsAuthLayer {

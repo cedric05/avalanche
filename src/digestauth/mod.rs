@@ -119,8 +119,8 @@ impl TryFrom<&ServiceConfig> for DigestAuthLayer {
     type Error = MarsError;
 
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let username = value.get_handler_config("username")?;
-        let password = value.get_handler_config("password")?;
+        let username = value.get_authparam_value_as_str("username")?;
+        let password = value.get_authparam_value_as_str("password")?;
         Ok(DigestAuthLayer {
             username: username.to_string(),
             password: password.to_string(),

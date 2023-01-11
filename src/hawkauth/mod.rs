@@ -79,9 +79,9 @@ impl TryFrom<&ServiceConfig> for HawkAuthLayer {
     type Error = MarsError;
 
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let key = value.get_handler_config("key")?;
-        let id = value.get_handler_config("id")?;
-        let algorithm = value.get_handler_config("algorithm")?;
+        let key = value.get_authparam_value_as_str("key")?;
+        let id = value.get_authparam_value_as_str("id")?;
+        let algorithm = value.get_authparam_value_as_str("algorithm")?;
         let algorithm = match algorithm {
             "sha256" => DigestAlgorithm::Sha256,
             "sha384" => DigestAlgorithm::Sha384,

@@ -15,7 +15,9 @@ pub struct Model {
     #[sea_orm(column_type = "Text")]
     pub headers: Headers,
     #[sea_orm(column_type = "Text")]
-    pub handler_type: HandlerParams,
+    pub auth: Auth,
+    #[sea_orm(column_type = "Text")]
+    pub params: GeneralParams,
     #[sea_orm(column_type = "Text")]
     pub index: String,
     pub url: String,
@@ -28,7 +30,6 @@ impl ActiveModelBehavior for ActiveModel {}
 
 #[cfg(test)]
 mod test {
-    use mars_config::ProxyParams;
     use sea_orm::{sea_query::TableCreateStatement, ConnectionTrait, Database, Schema, Set};
     use serde_json::json;
 
@@ -65,14 +66,15 @@ mod test {
                 value: "headervalue".to_owned(),
                 action: Action::Add,
             }])),
-            handler_type: sea_orm::ActiveValue::Set(HandlerParams(ProxyParams {
+            auth: sea_orm::ActiveValue::Set(Auth(mars_config::MarsAuth {
                 params: json!({
                     "password": "password",
                     "username": "postman"
                 }),
-                handler_type: "digest_auth".to_string(),
+                auth_type: mars_config::AuthType::DigestAuth,
             })),
-            index: sea_orm::ActiveValue::Set("digest".to_owned()),
+            params: sea_orm::ActiveValue::Set(GeneralParams(mars_config::GeneralParams(json!({})))),
+            index: sea_orm::ActiveValue::Set("digest2".to_owned()),
             url: sea_orm::ActiveValue::Set("https://postman-echo.com/".to_owned()),
         };
         let res = Entity::insert(pear).exec(&db).await.unwrap();

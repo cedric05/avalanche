@@ -29,8 +29,8 @@ impl TryFrom<&ServiceConfig> for Identity {
     type Error = MarsError;
 
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let pkcs_der = value.get_handler_config("pkcs12")?;
-        let password = value.get_handler_config("pkcs12_password")?;
+        let pkcs_der = value.get_authparam_value_as_str("pkcs12")?;
+        let password = value.get_authparam_value_as_str("pkcs12_password")?;
         let pkcs_der = base64::decode(pkcs_der).map_err(|err| {
             MarsError::ServiceConfigError(format!("unable to parse pkcs_der: {}", err))
         })?;

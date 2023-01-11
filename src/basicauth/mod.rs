@@ -79,8 +79,8 @@ impl TryFrom<&ServiceConfig> for BasicAuthLayer {
     type Error = MarsError;
 
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let username = value.get_handler_config("username")?;
-        let password = value.get_handler_config("password")?;
+        let username = value.get_authparam_value_as_str("username")?;
+        let password = value.get_authparam_value_as_str("password")?;
         let basic_auth_layer = BasicAuthLayer::from_username_n_password(username, password)
             .map_err(|_| {
                 MarsError::ServiceConfigError(format!(

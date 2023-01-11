@@ -17,8 +17,7 @@ impl ActiveModelBehavior for ActiveModel {}
 
 #[cfg(test)]
 mod test {
-    use mars_config::ProxyParams;
-    use sea_orm::{sea_query::TableCreateStatement, ConnectionTrait, Database, Schema, Set};
+    use sea_orm::{sea_query::TableCreateStatement, ConnectionTrait, Database, Schema};
     use serde_json::json;
 
     use super::*;

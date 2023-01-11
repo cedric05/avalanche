@@ -27,9 +27,9 @@
 
 # TODO Client settings
 - [ ] Set limits on client
-  - [ ] Timeout
+  - [x] Timeout
   - [ ] Rate limits
-  - [ ] Rate limit per User
+  - [x] Concurrency limit per service
 - [ ] Discard client if not used for last couple of hours (lower memory)
 - [ ] Use database instead of settings
 

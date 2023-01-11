@@ -23,7 +23,7 @@
                 "--db",
                 "sqlite:///home/neptune/projects/personal/cedric05/mars-rover/db.sqlite",
                 "--addr",
-                "127.0.0.1:8080"
+                "127.0.0.1:3000"
             ],
             "cwd": "${workspaceFolder}"
         },

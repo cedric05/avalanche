@@ -5,6 +5,7 @@ use http::{Request, Response};
 use hyper::client::HttpConnector;
 use hyper::Body;
 use hyper_tls::HttpsConnector;
+use mars_config::AuthType;
 use tower::limit::ConcurrencyLimitLayer;
 use tower::timeout::TimeoutLayer;
 use tower::ServiceBuilder;
@@ -42,16 +43,16 @@ pub(crate) fn get_auth_service(service_config: ServiceConfig) -> Result<ProxySer
         .get_concurrency_timeout()
         .map(|x| x as usize)
         .map(ConcurrencyLimitLayer::new);
-    match service_config.handler.handler_type.as_str() {
+    match service_config.auth.auth_type {
         #[cfg(feature = "basicauth")]
-        "basic_auth" => Ok(ServiceBuilder::new()
+        AuthType::BasicAuth => Ok(ServiceBuilder::new()
             .layer(BoxCloneSyncService::layer())
             .option_layer(timeout)
             .option_layer(concurrency_limit)
             .layer(CommonUpdateQueryNHeaderLayer::new(service_config.clone()))
             .layer(BasicAuthLayer::try_from(&service_config)?)
             .service(simple_hyper_https_client())),
-        "header_auth" => Ok(ServiceBuilder::new()
+        AuthType::HeaderAuth => Ok(ServiceBuilder::new()
             .layer(BoxCloneSyncService::layer())
             .option_layer(timeout)
             .option_layer(concurrency_limit)
@@ -59,7 +60,7 @@ pub(crate) fn get_auth_service(service_config: ServiceConfig) -> Result<ProxySer
             .layer(HeaderAuthLayer::try_from(&service_config)?)
             .service(simple_hyper_https_client())),
         #[cfg(feature = "awsauth")]
-        "aws_auth" => Ok(ServiceBuilder::new()
+        AuthType::AwsAuth => Ok(ServiceBuilder::new()
             .layer(BoxCloneSyncService::layer())
             .option_layer(timeout)
             .option_layer(concurrency_limit)
@@ -67,14 +68,14 @@ pub(crate) fn get_auth_service(service_config: ServiceConfig) -> Result<ProxySer
             .layer(AwsAuthLayer::try_from(&service_config)?)
             .service(simple_hyper_https_client())),
         #[cfg(feature = "x509auth")]
-        "x509" => Ok(ServiceBuilder::new()
+        AuthType::X509Auth => Ok(ServiceBuilder::new()
             .layer(BoxCloneSyncService::layer())
             .option_layer(timeout)
             .option_layer(concurrency_limit)
             .layer(CommonUpdateQueryNHeaderLayer::new(service_config.clone()))
             .service(ssl_auth_client_from_service_config(&service_config)?)),
         #[cfg(feature = "hawkauth")]
-        "hawk_auth" => Ok(ServiceBuilder::new()
+        AuthType::HawkAuth => Ok(ServiceBuilder::new()
             .layer(BoxCloneSyncService::layer())
             .option_layer(timeout)
             .option_layer(concurrency_limit)
@@ -82,14 +83,14 @@ pub(crate) fn get_auth_service(service_config: ServiceConfig) -> Result<ProxySer
             .layer(HawkAuthLayer::try_from(&service_config)?)
             .service(simple_hyper_https_client())),
         #[cfg(feature = "digestauth")]
-        "digest_auth" => Ok(ServiceBuilder::new()
+        AuthType::DigestAuth => Ok(ServiceBuilder::new()
             .layer(BoxCloneSyncService::layer())
             .option_layer(timeout)
             .option_layer(concurrency_limit)
             .layer(CommonUpdateQueryNHeaderLayer::new(service_config.clone()))
             .layer(DigestAuthLayer::try_from(&service_config)?)
             .service(simple_hyper_https_client())),
-        "no_auth" => Ok(ServiceBuilder::new()
+        AuthType::NoAuth => Ok(ServiceBuilder::new()
             .layer(BoxCloneSyncService::layer())
             .option_layer(timeout)
             .option_layer(concurrency_limit)

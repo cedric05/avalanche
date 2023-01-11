@@ -1,4 +1,5 @@
 use crate::auth::{get_auth_service, ProxyService};
+use crate::error::MarsError;
 
 use dashmap::{mapref::one::RefMut, DashMap};
 use sea_orm::{ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter};
@@ -44,19 +45,25 @@ impl ProjectHandler for DbProject {
                         method: project.method.0,
                         query_params: project.query_params.0,
                         headers: project.headers.0,
-                        handler: project.handler_type.0,
+                        auth: project.auth.0,
+                        params: project.params.0,
                     };
                     println!("config is {:?}", config);
-                    if let Ok(res) = get_auth_service(config) {
-                        self.services.insert(path.clone(), res);
-                        Ok(self.services.get_mut(&path))
-                    } else {
-                        // TODO
-                        // need to handle error scenarios
-                        Ok(None)
+                    match get_auth_service(config) {
+                        Ok(res) => {
+                            self.services.insert(path.clone(), res);
+                            Ok(self.services.get_mut(&path))
+                        }
+                        Err(err) => Err(Box::new(MarsError::ServiceConfigError(format!(
+                            "unable to derive auth config error: `{}`",
+                            err
+                        )))),
                     }
                 }
-                None => Ok(None),
+                None => Err(Box::new(MarsError::ServiceConfigError(format!(
+                    "for project `{}` service: `{}` is not configured",
+                    self.project_id, path,
+                )))),
             }
         }
     }
