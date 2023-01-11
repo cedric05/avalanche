@@ -116,7 +116,7 @@ impl TryFrom<&ServiceConfig> for HeaderAuthLayer {
 
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
         let headers_auth_config: HeadersAuthConfig =
-            serde_json::from_value(value.auth.params.clone()).map_err(|err| {
+            serde_json::from_value(value.auth.get_params()).map_err(|err| {
                 MarsError::ServiceConfigError(format!(
                     "unable to parse headers auth config because of  {err}"
                 ))

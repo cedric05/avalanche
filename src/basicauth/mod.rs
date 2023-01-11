@@ -86,7 +86,7 @@ impl TryFrom<&ServiceConfig> for BasicAuthLayer {
     type Error = MarsError;
 
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let basic_auth_params: BasicAuthParams = serde_json::from_value(value.auth.params.clone())
+        let basic_auth_params: BasicAuthParams = serde_json::from_value(value.auth.get_params())
             .map_err(|err| {
                 MarsError::ServiceConfigError(format!(
                     "unable to parse auth params for basic auth configuration error:{}",

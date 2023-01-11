@@ -124,7 +124,7 @@ impl TryFrom<&ServiceConfig> for AwsAuthLayer {
     type Error = MarsError;
 
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let aws_auth_params: AwsAuthParams = serde_json::from_value(value.auth.params.clone())
+        let aws_auth_params: AwsAuthParams = serde_json::from_value(value.auth.get_params())
             .map_err(|err| {
                 MarsError::ServiceConfigError(format!(
                     "unable to parse auth params for aws auth configuration error:{}",

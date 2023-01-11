@@ -30,7 +30,7 @@ impl ActiveModelBehavior for ActiveModel {}
 
 #[cfg(test)]
 mod test {
-    use sea_orm::{sea_query::TableCreateStatement, ConnectionTrait, Database, Schema, Set};
+    use sea_orm::{sea_query::TableCreateStatement, ConnectionTrait, Database, Schema};
     use serde_json::json;
 
     use super::*;
@@ -66,16 +66,18 @@ mod test {
                 value: "headervalue".to_owned(),
                 action: Action::Add,
             }])),
-            auth: sea_orm::ActiveValue::Set(Auth(mars_config::MarsAuth {
-                params: json!({
-                    "password": "password",
-                    "username": "postman"
-                }),
-                auth_type: mars_config::AuthType::DigestAuth,
-            })),
-            params: sea_orm::ActiveValue::Set(GeneralParams(mars_config::GeneralParams(json!({})))),
-            index: sea_orm::ActiveValue::Set("digest2".to_owned()),
-            url: sea_orm::ActiveValue::Set("https://postman-echo.com/".to_owned()),
+            auth: sea_orm::ActiveValue::Set(Auth(mars_config::MarsAuth::new(
+                json!([{
+                    "key": "Authorization",
+                    "value": "Bearer hai"
+                }]),
+                mars_config::AuthType::HeaderAuth,
+            ))),
+            params: sea_orm::ActiveValue::Set(GeneralParams(mars_config::GeneralParams::new(
+                json!({}),
+            ))),
+            index: sea_orm::ActiveValue::Set("userinput".to_owned()),
+            url: sea_orm::ActiveValue::Set("https://httpbin.org/".to_owned()),
         };
         let res = Entity::insert(pear).exec(&db).await.unwrap();
 

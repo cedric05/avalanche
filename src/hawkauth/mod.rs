@@ -98,7 +98,7 @@ impl TryFrom<&ServiceConfig> for HawkAuthLayer {
     type Error = MarsError;
 
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let hawk_auth_params: HawkAuthParams = serde_json::from_value(value.auth.params.clone())
+        let hawk_auth_params: HawkAuthParams = serde_json::from_value(value.auth.get_params())
             .map_err(|err| {
                 MarsError::ServiceConfigError(format!(
                     "unable to parse auth params for hawk auth configuration error:{}",

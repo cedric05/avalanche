@@ -126,8 +126,8 @@ impl TryFrom<&ServiceConfig> for DigestAuthLayer {
     type Error = MarsError;
 
     fn try_from(value: &ServiceConfig) -> Result<Self, Self::Error> {
-        let digest_auth_params: DigestAuthParams =
-            serde_json::from_value(value.auth.params.clone()).map_err(|err| {
+        let digest_auth_params: DigestAuthParams = serde_json::from_value(value.auth.get_params())
+            .map_err(|err| {
                 MarsError::ServiceConfigError(format!(
                     "unable to parse auth params for digest auth configuration error:{}",
                     err

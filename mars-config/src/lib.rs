@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum Action {
@@ -53,8 +53,26 @@ pub enum Method {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 
 pub struct MarsAuth {
-    pub params: serde_json::Value,
-    pub auth_type: AuthType,
+    params: serde_json::Value,
+    auth_type: AuthType,
+}
+
+impl MarsAuth {
+    pub fn get_param(&self, key: &str) -> Option<&Value> {
+        self.params.get(key)
+    }
+
+    pub fn get_params(&self) -> Value {
+        self.params.clone()
+    }
+
+    pub fn auth_type(&self) -> &AuthType {
+        &self.auth_type
+    }
+
+    pub fn new(params: serde_json::Value, auth_type: AuthType) -> Self {
+        Self { params, auth_type }
+    }
 }
 
 impl Default for MarsAuth {
@@ -66,7 +84,7 @@ impl Default for MarsAuth {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
 #[non_exhaustive]
 pub enum AuthType {
     #[serde(rename = "basic_auth")]
@@ -87,7 +105,17 @@ pub enum AuthType {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 
-pub struct GeneralParams(pub serde_json::Value);
+pub struct GeneralParams(serde_json::Value);
+
+impl GeneralParams {
+    pub fn get_value(&self, key: &str) -> Option<&serde_json::Value> {
+        self.0.get(key)
+    }
+
+    pub fn new(value: serde_json::Value) -> Self {
+        GeneralParams(value)
+    }
+}
 
 impl Default for GeneralParams {
     fn default() -> Self {

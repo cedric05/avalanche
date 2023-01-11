@@ -42,35 +42,29 @@ lazy_static::lazy_static! {
 impl ServiceConfig {
     pub(crate) fn get_authparam_value_as_str(&self, key: &str) -> Result<&str, MarsError> {
         self.auth
-            .params
-            .get(key)
+            .get_param(key)
             .and_then(|x| x.as_str())
             .ok_or_else(|| {
                 MarsError::ServiceConfigError(format!("service config `{}` not found", key))
             })
     }
 
-    pub(crate) fn get_handler_value(&self, key: &str) -> Option<serde_json::Value> {
-        self.params.0.get(key).cloned()
-    }
-
     // timeout for a request
     pub(crate) fn get_timeout(&self) -> Option<f64> {
-        self.params.0.get("timeout").and_then(|x| x.as_f64())
+        self.params.get_value("timeout").and_then(|x| x.as_f64())
     }
 
     // allowed number of requests at a time
     pub(crate) fn get_concurrency_timeout(&self) -> Option<f64> {
         self.params
-            .0
-            .get("concurrency_limit")
+            .get_value("concurrency_limit")
             .and_then(|x| x.as_f64())
     }
 
     // allowed number of requests for one second duration
     #[allow(unused)]
     pub(crate) fn get_rate_timeout(&self) -> Option<f64> {
-        self.params.0.get("rate_limit").and_then(|x| x.as_f64())
+        self.params.get_value("rate_limit").and_then(|x| x.as_f64())
     }
 
     pub(crate) fn get_updated_request<ReqBody>(

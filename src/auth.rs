@@ -43,7 +43,7 @@ pub(crate) fn get_auth_service(service_config: ServiceConfig) -> Result<ProxySer
         .get_concurrency_timeout()
         .map(|x| x as usize)
         .map(ConcurrencyLimitLayer::new);
-    match service_config.auth.auth_type {
+    match service_config.auth.auth_type() {
         #[cfg(feature = "basicauth")]
         AuthType::BasicAuth => Ok(ServiceBuilder::new()
             .layer(BoxCloneSyncService::layer())
