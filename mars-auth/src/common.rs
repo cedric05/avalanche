@@ -1,7 +1,6 @@
 use std::{future::Future, pin::Pin, str::FromStr};
 
 use http::{Request, Response};
-use hyper::Body;
 use mars_config::{ServiceConfig, AVALANCHE_TOKEN};
 use tower::{Layer, Service};
 
@@ -11,14 +10,7 @@ use std::error::Error;
 
 use url::Url;
 
-pub fn response_from_status_message(
-    status: u16,
-    message: String,
-) -> Result<Response<Body>, Box<dyn Error>> {
-    Ok(Response::builder()
-        .status(status)
-        .body(Body::from(message))?)
-}
+use crate::response_from_status_message;
 
 lazy_static::lazy_static! {
     static ref HOP_HEADERS: Vec<HeaderName> = vec![

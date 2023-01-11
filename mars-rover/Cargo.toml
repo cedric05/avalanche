@@ -36,5 +36,13 @@ hawkauth = ["mars-auth/hawkauth", "mars-auth/config"]
 x509auth = ["mars-auth/x509auth", "mars-auth/config"]
 digestauth = ["mars-auth/digestauth", "mars-auth/config"]
 basicauth = ["mars-auth/basicauth", "mars-auth/config"]
-default = ["awsauth", "hawkauth", "x509auth", "digestauth", "basicauth", "sql"]
+default = [
+    "awsauth",
+    "hawkauth",
+    "x509auth",
+    "digestauth",
+    "basicauth",
+    "sql",
+    "mars-auth/transform",
+]
 sql = ["mars-entity", "sea-orm"]

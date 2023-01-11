@@ -26,6 +26,10 @@ impl ServiceConfig {
         self.params.get_value("timeout").and_then(|x| x.as_f64())
     }
 
+    pub fn get_params(&self, key: &str) -> Option<&Value> {
+        self.params.get_value(key)
+    }
+
     // allowed number of requests at a time
     pub fn get_concurrency_timeout(&self) -> Option<f64> {
         self.params

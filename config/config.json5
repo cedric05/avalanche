@@ -1,7 +1,7 @@
 {
     "first": {
         "subprojects": {
-            "sample1": {
+            "yaml": {
                 "url": "http://httpbin.org/",
                 "method": "ANY",
                 "query_params": [
@@ -24,6 +24,108 @@
                         "username": "prasanth"
                     },
                     "auth_type": "basic_auth"
+                },
+                "params": {
+                    "response_json_to_yaml": true
+                }
+            },
+            "json": {
+                "url": "http://httpbin.org/",
+                "method": "ANY",
+                "query_params": [
+                    {
+                        "key": "test",
+                        "value": "test",
+                        "action": "Add"
+                    }
+                ],
+                "headers": [
+                    {
+                        "key": "test",
+                        "value": "test",
+                        "action": "Add"
+                    }
+                ],
+                "auth": {
+                    "params": {
+                        "password": "password",
+                        "username": "prasanth"
+                    },
+                    "auth_type": "basic_auth"
+                },
+                "params": {
+                    "request_yaml_to_json": true
+                }
+            },
+            "xml": {
+                "url": "http://httpbin.org/",
+                "method": "ANY",
+                "query_params": [
+                    {
+                        "key": "test",
+                        "value": "test",
+                        "action": "Add"
+                    }
+                ],
+                "headers": [
+                    {
+                        "key": "test",
+                        "value": "test",
+                        "action": "Add"
+                    }
+                ],
+                "auth": {
+                    "params": {
+                        "password": "password",
+                        "username": "prasanth"
+                    },
+                    "auth_type": "basic_auth"
+                },
+                "params": {
+                    "request_xml_to_json": true
+                }
+            },
+            "transform": {
+                "url": "http://httpbin.org/",
+                "method": "ANY",
+                "query_params": [
+                    {
+                        "key": "test",
+                        "value": "test",
+                        "action": "Add"
+                    }
+                ],
+                "headers": [
+                    {
+                        "key": "test",
+                        "value": "test",
+                        "action": "Add"
+                    }
+                ],
+                "auth": {
+                    "params": {
+                        "password": "password",
+                        "username": "prasanth"
+                    },
+                    "auth_type": "basic_auth"
+                },
+                "params": {
+                    "jolt_request_transform": [
+                        {
+                            "operation": "default",
+                            "spec": {
+                                "before_request": true
+                            }
+                        }
+                    ],
+                    "jolt_response_transform": [
+                        {
+                            "operation": "default",
+                            "spec": {
+                                "after_request": true
+                            }
+                        }
+                    ]
                 }
             },
             "sample2": {

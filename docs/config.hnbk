@@ -1,0 +1,171 @@
+- kind: 2
+  language: dothttp-vscode
+  value: |
+
+    @name(base)
+    GET 'http://localhost:3000/first'
+    // "avalanche-token" : "hai"
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |
+
+    @name(bearer): base
+    GET '/hawk'
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |+
+
+
+    @name('digest'): base
+    GET '/digest/'
+
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |+
+
+    @name('noauth'): base
+    GET '/noauth/get'
+
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |+
+
+    @name('ssl'): base
+    GET '/ssl'
+
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |-
+
+    @name('headerauth'): base
+    GET '/sample2'
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |
+
+
+    @name('aws auth'): "base"
+    GET '/aws_auth/'
+    ?Action=DescribeInstances
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |+
+
+    @name('s3'): "base"
+    GET '/aws_auth2/'
+    // ?Action=DescribeInstances
+
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |+
+
+
+    @name('transform'): "base"
+    POST '/transform/post'
+    json({})
+
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |
+
+
+    @name('xml'): "base"
+    POST '/xml/post'
+    "Content-Type" : "application/xml"
+    text(
+        """
+        <document>
+      <header>A header</header>
+      <section>First section</section>
+      <section>Second section</section>
+      <sidenote>A sidenote</sidenote>
+      <section>Third section</section>
+      <sidenote>Another sidenote</sidenote>
+      <section>Fourth section</section>
+      <footer>The footer</footer>
+    </document>
+        
+        """
+    )
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: |+
+
+
+
+
+    @name('yaml'): "base"
+    POST '/yaml/post'
+    "Content-Type" : "application/xml"
+    text(
+        """
+        <document>
+      <header>A header</header>
+      <section>First section</section>
+      <section>Second section</section>
+      <sidenote>A sidenote</sidenote>
+      <section>Third section</section>
+      <sidenote>Another sidenote</sidenote>
+      <section>Fourth section</section>
+      <footer>The footer</footer>
+    </document>
+        
+        """
+    )
+
+  outputs: []
+- kind: 2
+  language: dothttp-vscode
+  value: >-
+
+
+
+
+    @name('json'): "base"
+
+    POST '/json/post'
+
+    "Content-Type" : "application/yaml"
+
+    text(
+        """args:
+      test: test
+    data: "\n    <document>\n  <header>A header</header>\n  <section>First
+    section</section>\n  <section>Second section</section>\n  <sidenote>A
+    sidenote</sidenote>\n  <section>Third section</section>\n  <sidenote>Another
+    sidenote</sidenote>\n  <section>Fourth section</section>\n  <footer>The
+    footer</footer>\n</document>\n    \n    "
+
+    files: {}
+
+    form: {}
+
+    headers:
+      Accept-Encoding: identity
+      Authorization: Basic cHJhc2FudGg6cGFzc3dvcmQ=
+      Avalanche-Trace: 521476ae-96d2-4a81-b7ea-6ab53ae8cc05
+      Content-Length: '311'
+      Content-Type: application/xml
+      Cookie: sails.sid=s%3ArnXbu5DYaJQmnH_qgpkL9C6gUYa1d5Gm.FrT78lYcyB1dpBSZ6rzv6JtnOwl3hOHqWJi24EUyye8
+      Host: httpbin.org
+      Test: test
+      User-Agent: python-urllib3/1.26.13
+      X-Amzn-Trace-Id: Root=1-63be9d57-6a45a9c76deea0d3259cde71
+    json: null
+
+    origin: 144.48.224.180
+
+    url: http://httpbin.org/post?test=test"""
+
+    )
+  outputs: []

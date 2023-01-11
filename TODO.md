@@ -35,7 +35,7 @@
 
 # TODO Response
 - [ ] remove few headers from response
-- [ ] transform (json to xml, xml to json and few other)
+- [x] transform (json to xml, xml to json and few other)
 
 # TODO ADMIN
 - [ ] Admin user

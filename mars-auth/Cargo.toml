@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-
+fluvio-jolt = { workspace = true, optional = true }
 aws-sigv4 = { optional = true, workspace = true }
 base64 = { optional = true, workspace = true }
 digest_auth = { optional = true, workspace = true }
@@ -25,6 +25,9 @@ tokio-native-tls = { optional = true, workspace = true }
 tower = { workspace = true }
 tower-boxed-service-sync = { path = "../tower-boxed-service-sync", optional = true }
 url = { workspace = true }
+serde-xml-rs = { workspace = true, optional = true }
+serde_yaml = { workspace = true, optional = true }
+
 [dev-dependencies]
 tokio = { features = ["full"], workspace = true }
 time = { workspace = true }
@@ -45,3 +48,4 @@ config = [
     "mars-config",
 ]
 default = []
+transform = ["fluvio-jolt", "serde_json", "serde-xml-rs", "serde_yaml"]
