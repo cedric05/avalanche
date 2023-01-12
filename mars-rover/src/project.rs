@@ -108,7 +108,12 @@ pub(crate) trait ProjectManager: Sync + Send {
                             ))
                         })?;
                 request.extensions_mut().insert(ProxyUrlPath(url_rest));
-                match service_pair.value_mut().call(request).await {
+                let service = service_pair.value_mut();
+                // TODO Handle errors or waits
+                futures::future::poll_fn(|cx| service.poll_ready(cx))
+                    .await
+                    .unwrap_or(());
+                match service.call(request).await {
                     Err(resp) => response_from_status_message(
                         500,
                         format!("request to proxy ran into error: `{}`", resp),

@@ -23,7 +23,9 @@ impl ServiceConfig {
 
     // timeout for a request
     pub fn get_timeout(&self) -> Option<f64> {
-        self.params.get_value("timeout").and_then(|x| x.as_f64())
+        self.params
+            .get_value(crate::consts::TIMEOUT)
+            .and_then(|x| x.as_f64())
     }
 
     pub fn get_params(&self, key: &str) -> Option<&Value> {
@@ -33,13 +35,15 @@ impl ServiceConfig {
     // allowed number of requests at a time
     pub fn get_concurrency_timeout(&self) -> Option<f64> {
         self.params
-            .get_value("concurrency_limit")
+            .get_value(crate::consts::CONCURRENCY_LIMIT)
             .and_then(|x| x.as_f64())
     }
 
     // allowed number of requests for one second duration
     #[allow(unused)]
     pub fn get_rate_timeout(&self) -> Option<f64> {
-        self.params.get_value("rate_limit").and_then(|x| x.as_f64())
+        self.params
+            .get_value(crate::consts::RATE_LIMIT)
+            .and_then(|x| x.as_f64())
     }
 }

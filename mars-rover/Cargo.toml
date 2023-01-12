@@ -28,7 +28,7 @@ sea-orm = { workspace = true, features = [
     "runtime-tokio-native-tls",
 ], optional = true }
 uuid = { workspace = true }
-
+futures = {workspace = true}
 
 [features]
 awsauth = ["mars-auth/awsauth", "mars-auth/config"]

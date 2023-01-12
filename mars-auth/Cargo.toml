@@ -27,6 +27,7 @@ tower-boxed-service-sync = { path = "../tower-boxed-service-sync", optional = tr
 url = { workspace = true }
 serde-xml-rs = { workspace = true, optional = true }
 serde_yaml = { workspace = true, optional = true }
+log = { workspace = true }
 
 [dev-dependencies]
 tokio = { features = ["full"], workspace = true }

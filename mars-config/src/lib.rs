@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 mod config;
+mod consts;
 mod error;
-
 pub use config::ServiceConfig;
 pub use error::*;
 
-pub const AVALANCHE_TOKEN: &str = "avalanche-token";
+pub use consts::*;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum Action {
@@ -129,3 +129,7 @@ impl Default for GeneralParams {
         Self(json!({}))
     }
 }
+
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Default, Deserialize)]
+pub struct AvalancheTrace(pub String);

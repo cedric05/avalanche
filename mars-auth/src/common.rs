@@ -1,7 +1,7 @@
 use std::{future::Future, pin::Pin, str::FromStr};
 
 use http::{Request, Response};
-use mars_config::{ServiceConfig, AVALANCHE_TOKEN};
+use mars_config::{AvalancheTrace, ServiceConfig, AVALANCHE_TOKEN};
 use tower::{Layer, Service};
 
 use http::{header::HeaderName, HeaderValue, Uri};
@@ -41,9 +41,14 @@ impl<S> CommonUpdateQueryNHeaders<S> {
         req: &mut Request<ReqBody>,
     ) -> Result<(), Box<dyn Error>> {
         let service_config = &self.service_config;
+        update_headers(req.headers_mut(), service_config)?;
         let uri = get_updated_url(service_config, rest)?;
         *req.uri_mut() = Uri::from_str(uri.as_ref())?;
-        update_headers(req.headers_mut(), service_config)?;
+        let trace: &AvalancheTrace = req
+            .extensions_mut()
+            .get::<AvalancheTrace>()
+            .expect("impossible to fail");
+        log::info!("[{}] final url is {}", trace.0, uri);
         Ok(())
     }
 }
@@ -51,9 +56,6 @@ impl<S> CommonUpdateQueryNHeaders<S> {
 fn get_updated_url(service_config: &ServiceConfig, rest: &str) -> Result<Url, Box<dyn Error>> {
     let uri = Url::from_str(&service_config.url.clone())?;
     let mut rest_path = uri.path().to_string();
-    if !rest_path.ends_with("/") {
-        rest_path.push('/');
-    }
     let (mut path, query) = if rest.contains('?') {
         let mut iter = rest.split('?');
         let path = iter.next().unwrap();
@@ -62,14 +64,16 @@ fn get_updated_url(service_config: &ServiceConfig, rest: &str) -> Result<Url, Bo
     } else {
         (rest.to_string(), "")
     };
+    if !rest_path.ends_with("/") && !path.is_empty() {
+        rest_path.push('/');
+    }
     if path.starts_with('/') {
         path.remove(0);
     }
     let mut url_query_pairs =
         Vec::from_iter(url::form_urlencoded::parse(query.as_bytes()).into_owned());
     url_query_pairs.append(&mut uri.query_pairs().into_owned().collect());
-    let join = uri.join(&rest_path);
-    let uri = join.and_then(|x| x.join(&path))?;
+    let uri = uri.join(&rest_path).and_then(|x| x.join(&path))?;
     for url_param in &service_config.query_params {
         match url_param.action {
             Action::Add => {
@@ -151,6 +155,10 @@ mod test {
                 "https://httpbin.org/first/second?rajesh=ram",
                 "third/?ranga=ramu&haha=ere"
             )
+        );
+        assert_eq!(
+            "https://httpbin.org/get?added=value",
+            url_join("http://httpbin.org/get", "")
         );
         assert_eq!(
             "https://httpbin.org/first/second/third/?ranga=ramu&added=value",

@@ -13,6 +13,7 @@ use std::sync::Arc;
 use clap::Parser;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::Server;
+use mars_config::{AvalancheTrace, AVALANCHE_TRACE};
 use user::{
     AuthToken,
     AuthTokenStore,
@@ -39,9 +40,10 @@ async fn main_service(
     // use uuid or some random generated
     let trace = uuid::Uuid::new_v4().to_string();
     request.headers_mut().insert(
-        HeaderName::from_str("avalanche-trace").expect("impossible to fail"),
+        HeaderName::from_str(AVALANCHE_TRACE).expect("impossible to fail"),
         HeaderValue::from_str(&trace).expect("impossible to fail"),
     );
+    request.extensions_mut().insert(AvalancheTrace(trace.clone()));
     let handle_request = project_handler.handle_request(
         request,
         // user_store,

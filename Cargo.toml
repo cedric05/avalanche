@@ -1,5 +1,7 @@
 [workspace]
 
+default-members = ["mars-rover"]
+
 members = [
     "mars-rover",
     "mars-config",
@@ -7,6 +9,12 @@ members = [
     "mars-auth",
     "tower-boxed-service-sync",
 ]
+
+[workspace.package]
+version = "0.0.1"
+authors = ["cedric05"]
+description = "auth-proxy for everyone"
+documentation = "https://github.com/cedric05/avalanche"
 
 [workspace.dependencies]
 async-trait = "0.1"
@@ -47,3 +55,4 @@ uuid = "1.2"
 fluvio-jolt = "0.1.1"
 serde-xml-rs = "0.6.0"
 serde_yaml = "0.9.16"
+futures = "*"

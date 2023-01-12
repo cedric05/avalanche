@@ -76,14 +76,11 @@
 - kind: 2
   language: dothttp-vscode
   value: |
-
-
     @name('xml'): "base"
     POST '/xml/post'
     "Content-Type" : "application/xml"
     text(
-        """
-        <document>
+        """<document>
       <header>A header</header>
       <section>First section</section>
       <section>Second section</section>
@@ -92,9 +89,7 @@
       <sidenote>Another sidenote</sidenote>
       <section>Fourth section</section>
       <footer>The footer</footer>
-    </document>
-        
-        """
+    </document>"""
     )
   outputs: []
 - kind: 2

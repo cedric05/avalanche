@@ -1,6 +1,9 @@
 use std::{error::Error, future::Future, pin::Pin};
 
-use http::{header::CONTENT_LENGTH, Request, Response};
+use http::{
+    header::{CONTENT_LENGTH, CONTENT_TYPE},
+    Request, Response,
+};
 use serde_json::Value;
 use tower::{Layer, Service};
 
@@ -102,6 +105,9 @@ async fn get_transformed_response(
         let output_json: Value = serde_yaml::from_slice(&body)?;
         let out = serde_json::to_vec(&output_json)?;
         parts.headers.remove(CONTENT_LENGTH);
+        parts
+            .headers
+            .append(CONTENT_TYPE, "application/json".try_into()?);
         Ok(Response::from_parts(parts, hyper::Body::from(out)))
     } else {
         Ok(resp)
@@ -118,6 +124,9 @@ async fn get_transformed_request(
         let output_json: Value = serde_yaml::from_slice(&body)?;
         let out = serde_json::to_vec(&output_json)?;
         parts.headers.remove(CONTENT_LENGTH);
+        parts
+            .headers
+            .append(CONTENT_TYPE, "application/json".try_into()?);
         Ok(Request::from_parts(parts, hyper::Body::from(out)))
     } else {
         Ok(request)
@@ -130,8 +139,8 @@ pub mod service_config {
 
     use super::YamlTransformJsonLayer;
 
-    pub const TRANSFORM_YAML_JSON_REQUEST: &str = "request_yaml_to_json";
-    pub const TRANSFORM_YAML_TO_JSON_RESPONSE: &str = "response_yaml_to_json";
+    pub use mars_config::TRANSFORM_YAML_JSON_REQUEST;
+    pub use mars_config::TRANSFORM_YAML_TO_JSON_RESPONSE;
 
     impl TryFrom<&ServiceConfig> for YamlTransformJsonLayer {
         type Error = MarsError;
