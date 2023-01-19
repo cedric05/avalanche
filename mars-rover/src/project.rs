@@ -15,7 +15,7 @@ use crate::user::{
     UserTokenStore,
 };
 use hyper::service::Service;
-use mars_auth::{response_from_status_message, ProxyService, ProxyUrlPath};
+use mars_request_transform::{response_from_status_message, ProxyService, ProxyUrlPath};
 
 /// project
 /// project has two main variables

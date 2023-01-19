@@ -22,7 +22,7 @@ tokio = { workspace = true, features = ["full"] }
 url = { workspace = true }
 mars-entity = { path = "../mars-entity", optional = true }
 mars-config = { path = "../mars-config" }
-mars-auth = { path = "../mars-auth" }
+mars-request-transform = { path = "../mars-request-transform" }
 sea-orm = { workspace = true, features = [
     "sqlx-sqlite",
     "runtime-tokio-native-tls",
@@ -31,11 +31,11 @@ uuid = { workspace = true }
 futures = {workspace = true}
 
 [features]
-awsauth = ["mars-auth/awsauth", "mars-auth/config"]
-hawkauth = ["mars-auth/hawkauth", "mars-auth/config"]
-x509auth = ["mars-auth/x509auth", "mars-auth/config"]
-digestauth = ["mars-auth/digestauth", "mars-auth/config"]
-basicauth = ["mars-auth/basicauth", "mars-auth/config"]
+awsauth = ["mars-request-transform/awsauth", "mars-request-transform/config"]
+hawkauth = ["mars-request-transform/hawkauth", "mars-request-transform/config"]
+x509auth = ["mars-request-transform/x509auth", "mars-request-transform/config"]
+digestauth = ["mars-request-transform/digestauth", "mars-request-transform/config"]
+basicauth = ["mars-request-transform/basicauth", "mars-request-transform/config"]
 default = [
     "awsauth",
     "hawkauth",
@@ -43,6 +43,6 @@ default = [
     "digestauth",
     "basicauth",
     "sql",
-    "mars-auth/transform",
+    "mars-request-transform/transform",
 ]
 sql = ["mars-entity", "sea-orm"]

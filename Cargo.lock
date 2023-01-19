@@ -1078,7 +1078,28 @@ dependencies = [
 ]
 
 [[package]]
-name = "mars-auth"
+name = "mars-config"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "mars-entity"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "json5",
+ "mars-config",
+ "sea-orm",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "mars-request-transform"
 version = "0.1.0"
 dependencies = [
  "aws-sigv4",
@@ -1106,27 +1127,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mars-config"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "mars-entity"
-version = "0.1.0"
-dependencies = [
- "clap",
- "json5",
- "mars-config",
- "sea-orm",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "mars-rover"
 version = "0.1.0"
 dependencies = [
@@ -1141,9 +1141,9 @@ dependencies = [
  "hyper-tls",
  "json5",
  "log",
- "mars-auth",
  "mars-config",
  "mars-entity",
+ "mars-request-transform",
  "sea-orm",
  "serde_json",
  "simple_logger",

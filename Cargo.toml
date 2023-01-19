@@ -6,7 +6,7 @@ members = [
     "mars-rover",
     "mars-config",
     "mars-entity",
-    "mars-auth",
+    "mars-request-transform",
     "tower-boxed-service-sync",
 ]
 

@@ -27,7 +27,7 @@ use http::{header::HeaderName, HeaderValue, Request, Response};
 use hyper::Body;
 use project::ProjectManager;
 
-pub use mars_auth as auth;
+pub use mars_request_transform as auth;
 
 async fn main_service(
     mut request: Request<Body>,
