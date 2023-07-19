@@ -132,8 +132,9 @@ mod test {
 
     use super::DbProjectManager;
 
+    #[ignore]
     #[tokio::test]
-    async fn haha() {
+    async fn test_basic() {
         let db = Database::connect(
             "sqlite:///home/neptune/projects/personal/cedric05/mars-rover/db.sqlite",
         )
