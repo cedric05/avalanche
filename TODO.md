@@ -49,8 +49,12 @@
 - [ ] develop a layer to save config to database, in memory, from file (configuration), redis
 - [ ] integration with hashicorp vault (to save secure data)
 
+# TODO configure
+- [ ] configure base path
+- [ ] support for health check and stats
+
 # TODO Docs
- 
+
 
 # TODO tests
 
