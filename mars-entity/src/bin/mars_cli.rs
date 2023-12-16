@@ -3,8 +3,10 @@ use std::collections::HashMap;
 use clap::{Parser, Subcommand};
 use mars_config::ServiceConfig;
 use mars_entity::project::ActiveModel;
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, ConnectionTrait, Schema, sea_query::TableCreateStatement};
 use serde::{Deserialize, Serialize};
+use mars_entity::project::Entity as ProjectEntity;
+use mars_entity::subproject::Entity as SubProjectEntity;
 
 #[derive(Parser)]
 struct Args {
@@ -22,6 +24,7 @@ struct Args {
 enum SubCommand {
     Load,
     Dump,
+    Orm,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -199,6 +202,19 @@ async fn main() {
                     done"
                 );
             }
+        }
+        SubCommand::Orm=>{
+            let builder = db.get_database_backend();
+            let schema = Schema::new(builder);
+            // Derive from Entity
+            let stmt: TableCreateStatement = schema.create_table_from_entity(ProjectEntity);
+            let result = db.execute(db.get_database_backend().build(&stmt)).await;
+
+            println!("created project {:?}", result);
+
+            let stmt: TableCreateStatement = schema.create_table_from_entity(SubProjectEntity);
+            let result = db.execute(db.get_database_backend().build(&stmt)).await;
+            println!("created subproject {:?}", result);
         }
     }
 }

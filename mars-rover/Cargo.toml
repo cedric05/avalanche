@@ -25,6 +25,7 @@ mars-config = { path = "../mars-config" }
 mars-request-transform = { path = "../mars-request-transform" }
 sea-orm = { workspace = true, features = [
     "sqlx-sqlite",
+    "sqlx-postgres",
     "runtime-tokio-native-tls",
 ], optional = true }
 uuid = { workspace = true }

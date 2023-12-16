@@ -1,3 +1,50 @@
+//! This module contains the implementation of the authentication service.
+//!
+//! The `get_auth_service` function is the entry point for obtaining an authentication service based on the provided `ServiceConfig`.
+//! It returns a `Result` containing a `ProxyService` or a `MarsError` if the authentication type is not supported.
+//!
+//! The `simple_hyper_https_client` function creates a simple HTTPS client using the `hyper` and `hyper_tls` crates.
+//!
+//! The `ProxyService` type is an alias for a boxed cloneable synchronous service that handles HTTP requests and responses.
+//!
+//! The `get_auth_service` function takes a `ServiceConfig` as input and returns a `Result` containing a `ProxyService` or a `MarsError`.
+//! It builds the authentication service based on the authentication type specified in the `ServiceConfig`.
+//! The authentication service is constructed using the `ServiceBuilder` from the `tower` crate and various layers and options.
+//! The layers include the `BoxCloneSyncService` layer, the `TimeoutLayer`, the `ConcurrencyLimitLayer`, and the `CommonUpdateQueryNHeaderLayer`.
+//! The options include the transformation layers for Jolt, XML, YAML, and JSON, based on the features enabled.
+//! The authentication layer is added based on the authentication type specified in the `ServiceConfig`.
+//! Finally, the authentication service is wrapped with the `simple_hyper_https_client` function to create the final service.
+//!
+//! The authentication types supported are:
+//! - BasicAuth
+//! - HeaderAuth
+//! - AwsAuth (requires the `awsauth` feature)
+//! - X509Auth (requires the `x509auth` feature)
+//! - HawkAuth (requires the `hawkauth` feature)
+//! - DigestAuth (requires the `digestauth` feature)
+//! - NoAuth
+//!
+//! If the authentication type is not supported or not registered, an error of type `MarsError::ServiceNotRegistered` is returned.
+//!
+//! Example usage:
+//!
+//! ```rust
+//! use mars_config::ServiceConfig;
+//!
+//! let service_config = ServiceConfig::new();
+//! let auth_service = get_auth_service(service_config);
+//!
+//! match auth_service {
+//!     Ok(service) => {
+//!         // Use the authentication service
+//!     },
+//!     Err(error) => {
+//!         // Handle the error
+//!     }
+//! }
+//! ```
+//!
+//! Note: This documentation is auto-generated and may not be up-to-date. Please refer to the source code for the latest documentation.
 use std::error::Error;
 use std::time::Duration;
 

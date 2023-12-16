@@ -3,7 +3,7 @@
   value: |
 
     @name(base)
-    GET 'http://localhost:3000/first'
+    GET 'http://localhost:3000/aviko'
     // "avalanche-token" : "hai"
   outputs: []
 - kind: 2

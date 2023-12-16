@@ -24,6 +24,7 @@
 - [ ] jwt auth
 - [ ] NTLM
 - [x] No auth
+- [ ] Azure Auth
 
 # TODO Client settings
 - [ ] Set limits on client
@@ -56,4 +57,7 @@
 
 
 refer or inspire headers to discard from https://github.com/felipenoris/hyper-reverse-proxy/blob/master/src/lib.rs
+
+
+psql postgres://postgres:postgres@localhost:5432/postgres
 
