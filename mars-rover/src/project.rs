@@ -17,16 +17,27 @@ use crate::user::{
 use hyper::service::Service;
 use mars_request_transform::{response_from_status_message, ProxyService, ProxyUrlPath};
 
-/// project
-/// project has two main variables
-/// 1. project identifier
-/// 2. service identifier
-///
-///
-///
 
+
+/// `AuthProjectRequestHandler` is responsible for handling authentication requests for a project.
+///
+/// It implements the `ProjectRequestHandler` trait, meaning it provides functionality for processing
+/// HTTP requests related to a specific project. This includes tasks such as validating user tokens,
+/// managing authentication tokens, and forwarding requests to the appropriate services.
+///
+/// # Examples
+///
+/// ```rust
+/// let handler = AuthProjectRequestHandler::new();
+/// let response = handler.handle_request(request, user_token_store, auth_token_store).await;
+/// ```
+///
+/// # Errors
+///
+/// This handler will return an error if the request cannot be processed, for example due to invalid
+/// tokens or network issues.
 #[async_trait]
-pub(crate) trait ProjectHandler: Sync + Send + DynClone {
+pub(crate) trait AuthProjectRequestHandler: Sync + Send + DynClone {
     async fn is_project(&self, path: &str) -> bool;
 
     async fn get_service(
@@ -37,10 +48,30 @@ pub(crate) trait ProjectHandler: Sync + Send + DynClone {
     async fn auth_configured(&self) -> bool;
 }
 
-clone_trait_object!(ProjectHandler);
+clone_trait_object!(AuthProjectRequestHandler);
+
+
+
+/// `ProjectManager` is responsible for managing projects within the application.
+///
+/// It provides functionality for creating, updating, deleting, and retrieving projects. Each project
+/// can have zero or more services, and the `ProjectManager` is responsible for managing these services
+/// as well.
+///
+/// # Examples
+///
+/// ```rust
+/// let manager = ProjectManager::new();
+/// let project = manager.create_project("new_project").await;
+/// ```
+///
+/// # Errors
+///
+/// This manager will return an error if a project cannot be created, updated, deleted, or retrieved,
+/// for example due to database issues.
 
 #[async_trait]
-pub(crate) trait ProjectManager: Sync + Send {
+pub(crate) trait ProjectManager: Sync + Send {    
     async fn handle_request(
         &self,
         mut request: hyper::Request<Body>,
@@ -127,5 +158,5 @@ pub(crate) trait ProjectManager: Sync + Send {
     async fn get_project(
         &self,
         project_key: String,
-    ) -> Result<Option<Arc<Box<dyn ProjectHandler>>>, Box<dyn Error>>;
+    ) -> Result<Option<Arc<Box<dyn AuthProjectRequestHandler>>>, Box<dyn Error>>;
 }

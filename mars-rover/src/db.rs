@@ -1,3 +1,7 @@
+/// This module contains the implementation of the database-related functionality for the Mars Rover application.
+/// It includes structs for managing projects and services, as well as functions for retrieving project managers and database connections.
+
+
 use crate::auth::{get_auth_service, ProxyService};
 use dashmap::{mapref::one::RefMut, DashMap};
 use sea_orm::{ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter};
@@ -5,9 +9,10 @@ use sea_orm::{ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilte
 use std::error::Error;
 use std::sync::Arc;
 
-use crate::project::{ProjectHandler, ProjectManager};
+use crate::project::{AuthProjectRequestHandler, ProjectManager};
 use mars_config::{MarsError, ServiceConfig};
 
+/// Represents a project in the database.
 #[derive(Clone)]
 pub(crate) struct DbProject {
     name: String,
@@ -18,11 +23,13 @@ pub(crate) struct DbProject {
 }
 
 #[async_trait::async_trait]
-impl ProjectHandler for DbProject {
+impl AuthProjectRequestHandler for DbProject {
+    /// Checks if the given path matches the name of the project.
     async fn is_project(&self, path: &str) -> bool {
         self.name == path
     }
 
+    /// Retrieves the service associated with the given path.
     async fn get_service(
         &self,
         path: String,
@@ -66,23 +73,26 @@ impl ProjectHandler for DbProject {
         }
     }
 
+    /// Checks if authentication is configured for the project.
     async fn auth_configured(&self) -> bool {
         self.needs_auth
     }
 }
 
+/// Represents a project manager that interacts with the database.
 #[derive(Clone)]
 pub(crate) struct DbProjectManager {
     db_conn: DatabaseConnection,
-    projects: DashMap<String, Arc<Box<dyn ProjectHandler>>>,
+    projects: DashMap<String, Arc<Box<dyn AuthProjectRequestHandler>>>,
 }
 
 #[async_trait::async_trait]
 impl ProjectManager for DbProjectManager {
+    /// Retrieves the project with the given project key.
     async fn get_project(
         &self,
         project_key: String,
-    ) -> Result<Option<Arc<Box<dyn ProjectHandler>>>, Box<dyn Error>> {
+    ) -> Result<Option<Arc<Box<dyn AuthProjectRequestHandler>>>, Box<dyn Error>> {
         match self.projects.get_mut(&project_key) {
             Some(service) => Ok(Some(service.clone())),
             None => {
@@ -111,6 +121,7 @@ impl ProjectManager for DbProjectManager {
     }
 }
 
+/// Retrieves a project manager for the database connection.
 pub(crate) async fn get_db_project_manager(
     url: &str,
 ) -> Result<Arc<Box<dyn ProjectManager>>, Box<dyn Error>> {
@@ -122,14 +133,12 @@ pub(crate) async fn get_db_project_manager(
     };
     Ok(Arc::new(Box::new(project_manager)))
 }
+
 #[cfg(test)]
 mod test {
-
     use dashmap::DashMap;
     use sea_orm::Database;
-
     use crate::project::ProjectManager;
-
     use super::DbProjectManager;
 
     #[ignore]
@@ -155,7 +164,7 @@ mod test {
                         println!("service fetch working  ");
                     }
                     Ok(None) => {
-                        println!("service not avaiabile in db ");
+                        println!("service not available in db ");
                     }
                     Err(error) => {
                         println!("service fetching ran into error {:?}", error);
@@ -163,7 +172,7 @@ mod test {
                 }
             }
             Ok(None) => {
-                println!("project not avaiabile in db");
+                println!("project not available in db");
             }
             Err(error) => {
                 println!("project ran into error {:?}", error);

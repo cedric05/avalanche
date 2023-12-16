@@ -1,3 +1,33 @@
+//! This module contains the implementation of AWS authentication for requests.
+//!
+//! The `AwsAuth` struct is a wrapper around a service that adds AWS authentication to outgoing requests.
+//! It takes an access key, secret key, region, service name, and a flag indicating whether to sign the request content.
+//!
+//! The `AwsAuthLayer` struct is a tower layer that wraps a service and applies AWS authentication to requests.
+//!
+//! The module also includes a `TryFrom` implementation for converting a `ServiceConfig` into an `AwsAuthLayer`.
+//!
+//! The module also includes test functions for verifying the AWS authentication implementation.
+//!
+//! Example usage:
+//!
+//! ```rust
+//! use tower::Service;
+//! use http::Request;
+//! use hyper::Body;
+//! use mars_request_transform::auth::awsauth::{AwsAuth, AwsAuthLayer};
+//!
+//! // Create a service and wrap it with the `AwsAuthLayer`
+//! let service = MyService::new();
+//! let aws_auth_layer = AwsAuthLayer::new("access_key", "secret_key", "region", "service", true);
+//! let service_with_auth = aws_auth_layer.layer(service);
+//!
+//! // Create a request and send it through the service with authentication
+//! let request = Request::new(Body::empty());
+//! let response = service_with_auth.call(request).await.unwrap();
+//! ```
+//!
+//! For more information on AWS authentication, refer to the AWS documentation.
 use std::future::Future;
 use std::pin::Pin;
 use std::time::SystemTime;
@@ -10,6 +40,9 @@ use http::{Request, Response};
 use hyper::body;
 
 use tower::{Layer, Service};
+
+
+
 
 #[derive(Clone)]
 pub(crate) struct AwsAuth<S> {

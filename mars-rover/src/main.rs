@@ -1,8 +1,28 @@
+//! This is the main module of the Mars Rover application.
+//!
+//! It contains the entry point of the application (`main` function) and the `hyper_service_fn` function, which is an asynchronous function that processes incoming HTTP requests.
+//!
+//! The `hyper_service_fn` function takes in several parameters:
+//! - `request`: The incoming HTTP request. It's mutable because the function modifies its headers.
+//! - `project_handler`: An instance of a type that implements the `ProjectManager` trait. This object is responsible for handling the request.
+//! - `user_token_store` and `auth_token_store`: Instances of types that implement the `UserTokenStore` and `AuthTokenStore` traits, respectively. They are likely used for storing and retrieving user and authentication tokens.
+//!
+//! Inside the `hyper_service_fn` function, a new UUID is generated and added as a header to the request. This UUID is likely used as a trace ID for logging and debugging purposes. The UUID is also added to the request's extensions, which is a way to attach additional data to the request.
+//!
+//! The `handle_request` method of the `project_handler` is then called with the request and the token stores as parameters. This method is awaited because it's asynchronous, which means it might perform some IO operations, such as sending a network request or querying a database.
+//!
+//! The `hyper_service_fn` function returns a `Result` containing a `Response` if the request is successfully processed, or an `Infallible` error if the request cannot be processed.
+//!
+//! The `main` function is the entry point of the application. It sets up the logging, parses command line arguments, initializes the project handler, token stores, and the HTTP server. It then starts the server and listens for incoming HTTP requests.
+//!
+//! # Examples
+//!
+//!
 mod cli;
 #[cfg(feature = "sql")]
 mod db;
 mod project;
-mod simple;
+mod json_project_manager;
 mod user;
 
 use std::convert::Infallible;
@@ -17,7 +37,7 @@ use mars_config::{AvalancheTrace, AVALANCHE_TRACE};
 use user::{
     AuthToken,
     AuthTokenStore,
-    SimpleAuthTokenStore,
+    InMemoryAuthTokenStore,
     SimpleUserTokenStore,
     //UserStore,
     UserTokenStore,
@@ -29,7 +49,29 @@ use project::ProjectManager;
 
 pub use mars_request_transform as auth;
 
-async fn main_service(
+
+/// `hyper_service_fn` is an asynchronous function that processes incoming HTTP requests.
+///
+/// It takes in several parameters:
+/// - `request`: The incoming HTTP request. It's mutable because the function modifies its headers.
+/// - `project_handler`: An instance of a type that implements the `ProjectManager` trait. This object is responsible for handling the request.
+/// - `user_token_store` and `auth_token_store`: Instances of types that implement the `UserTokenStore` and `AuthTokenStore` traits, respectively. They are likely used for storing and retrieving user and authentication tokens.
+///
+/// Inside the function, a new UUID is generated and added as a header to the request. This UUID is likely used as a trace ID for logging and debugging purposes. The UUID is also added to the request's extensions, which is a way to attach additional data to the request.
+///
+/// The `handle_request` method of the `project_handler` is then called with the request and the token stores as parameters. This method is awaited because it's asynchronous, which means it might perform some IO operations, such as sending a network request or querying a database.
+///
+/// # Examples
+///
+/// ```rust
+/// let response = hyper_service_fn(request, project_handler, user_token_store, auth_token_store).await;
+/// ```
+///
+/// # Errors
+///
+/// This function will return an error if the request cannot be processed, for example due to invalid tokens or network issues.
+
+async fn hyper_service_fn(
     mut request: Request<Body>,
     project_handler: Arc<Box<dyn ProjectManager>>,
     //    user_store: Box<Arc<UserStore>>,
@@ -50,6 +92,8 @@ async fn main_service(
         user_token_store,
         auth_token_store,
     );
+
+
     let response = match handle_request.await {
         Ok(result) => result,
         Err(error) => {
@@ -68,19 +112,10 @@ async fn main_service(
     Ok(response)
 }
 
-async fn get_project_manager(args: &cli::Args) -> Arc<Box<dyn ProjectManager>> {
-    #[cfg(feature = "sql")]
-    if cfg!(feature = "sql") {
-        return match &args.db {
-            Some(db_url) => db::get_db_project_manager(db_url)
-                .await
-                .expect("unable to connect to db"),
-            None => simple::get_json_project_manager(args.config.clone().into())
-                .expect("unable to load config"),
-        };
-    }
-    simple::get_json_project_manager(args.config.clone().into()).expect("unable to load config")
-}
+
+
+
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -93,12 +128,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .init()?;
 
     let args = cli::Args::parse();
-    let project_handler = get_project_manager(&args).await;
+    let project_handler = args.get_project_manager().await;
 
     // let user_store: Box<Arc<UserStore>> = Box::new(Arc::new(UserStore::default()));
     let user_token_store: Box<Arc<dyn UserTokenStore>> =
         Box::new(Arc::new(SimpleUserTokenStore::default()));
-    let auth_token_store = SimpleAuthTokenStore::default();
+    let auth_token_store = InMemoryAuthTokenStore::default();
     auth_token_store.insert(AuthToken("hai".to_string()), "first".to_string());
     let auth_token_store: Box<Arc<dyn AuthTokenStore>> = Box::new(Arc::new(auth_token_store));
 
@@ -120,7 +155,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 let auth_token_store: Box<Arc<dyn AuthTokenStore>> = auth_token_store.clone();
                 async move {
                     //
-                    main_service(
+                    hyper_service_fn(
                         req,
                         project_handler,
                         //user_store,

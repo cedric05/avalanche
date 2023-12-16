@@ -11,11 +11,17 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::{convert::TryFrom, error::Error};
 
-use crate::project::{ProjectHandler, ProjectManager};
+use crate::project::{AuthProjectRequestHandler, ProjectManager};
 use mars_config::{MarsError, ServiceConfig};
 
+
+/// `FileBasedProject` represents a project that is configured based on a file.
+///
+/// It contains a map of service configurations, a flag indicating whether authentication is needed,
+/// a name, and a map of services. The `try_from` method is used to create an instance of `FileBasedProject`
+/// from a JSON configuration.
 #[derive(Clone)]
-struct SimpleProject {
+struct FileBasedProject {
     name: String,
     service_config_map: HashMap<String, ServiceConfig>,
     services: DashMap<String, ProxyService>,
@@ -23,7 +29,7 @@ struct SimpleProject {
 }
 
 #[async_trait]
-impl ProjectHandler for SimpleProject {
+impl AuthProjectRequestHandler for FileBasedProject {
     async fn is_project(&self, path: &str) -> bool {
         return self.name == path;
     }
@@ -53,19 +59,26 @@ impl ProjectHandler for SimpleProject {
     }
 }
 
+
+
+/// `FileProjectManager` is responsible for managing `FileBasedProject`s.
+///
+/// It contains a map of projects, where each project is an instance of a type that implements the
+/// `AuthProjectRequestHandler` trait. The `try_from` method is used to create an instance of `FileProjectManager`
+/// from a JSON configuration.
 #[derive(Clone)]
-pub(crate) struct SimpleProjectManager {
-    projects: DashMap<String, Arc<Box<dyn ProjectHandler>>>,
+pub(crate) struct FileProjectManager {
+    projects: DashMap<String, Arc<Box<dyn AuthProjectRequestHandler>>>,
 }
 
 // unsafe impl Send for SimpleProjectHandler {}
 
 #[async_trait]
-impl ProjectManager for SimpleProjectManager {
+impl ProjectManager for FileProjectManager {
     async fn get_project(
         &self,
         project_key: String,
-    ) -> Result<Option<Arc<Box<dyn ProjectHandler>>>, Box<dyn Error>> {
+    ) -> Result<Option<Arc<Box<dyn AuthProjectRequestHandler>>>, Box<dyn Error>> {
         let project = self.projects.get_mut(&project_key).ok_or_else(|| {
             MarsError::ServiceConfigError(format!("project `{project_key}` is missing"))
         })?;
@@ -73,7 +86,7 @@ impl ProjectManager for SimpleProjectManager {
     }
 }
 
-impl TryFrom<Value> for SimpleProject {
+impl TryFrom<Value> for FileBasedProject {
     type Error = MarsError;
 
     fn try_from(mut project_config: Value) -> Result<Self, Self::Error> {
@@ -108,7 +121,7 @@ impl TryFrom<Value> for SimpleProject {
                 })?;
             service_config_map.insert(service_key.to_string(), service_config);
         }
-        Ok(SimpleProject {
+        Ok(FileBasedProject {
             service_config_map,
             needs_auth,
             name: "no meaning as of now".to_string(),
@@ -117,7 +130,7 @@ impl TryFrom<Value> for SimpleProject {
     }
 }
 
-impl TryFrom<Value> for SimpleProjectManager {
+impl TryFrom<Value> for FileProjectManager {
     type Error = MarsError;
 
     fn try_from(mut value: Value) -> Result<Self, Self::Error> {
@@ -127,15 +140,15 @@ impl TryFrom<Value> for SimpleProjectManager {
         let map = DashMap::new();
         for (project_key, project_config) in all_config {
             let project_config = project_config.take();
-            let project = SimpleProject::try_from(project_config)?;
-            let project: Box<dyn ProjectHandler> = Box::new(project);
+            let project = FileBasedProject::try_from(project_config)?;
+            let project: Box<dyn AuthProjectRequestHandler> = Box::new(project);
             map.insert(project_key.to_string(), Arc::new(project));
         }
-        Ok(SimpleProjectManager { projects: map })
+        Ok(FileProjectManager { projects: map })
     }
 }
 
-pub(crate) fn get_json_project_manager(
+pub(crate) fn get_file_project_manager(
     path: PathBuf,
 ) -> Result<Arc<Box<dyn ProjectManager>>, MarsError> {
     let mut file = fs::File::open(path)
@@ -145,5 +158,5 @@ pub(crate) fn get_json_project_manager(
         .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
     let value: Value = json5::from_str(&config)
         .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
-    Ok(Arc::new(Box::new(SimpleProjectManager::try_from(value)?)))
+    Ok(Arc::new(Box::new(FileProjectManager::try_from(value)?)))
 }
