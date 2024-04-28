@@ -1,6 +1,6 @@
 [workspace]
-
-default-members = ["mars-rover"]
+resolver = "2"
+# default-members = ["mars-rover"]
 
 members = [
     "mars-rover",
