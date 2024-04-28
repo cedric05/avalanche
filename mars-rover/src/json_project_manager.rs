@@ -3,6 +3,9 @@ use crate::auth::{get_auth_service, ProxyService};
 use async_trait::async_trait;
 use dashmap::{mapref::one::RefMut, DashMap};
 
+use http::Request;
+use hyper::Client;
+use hyper_tls::HttpsConnector;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fs;
@@ -148,15 +151,32 @@ impl TryFrom<Value> for FileProjectManager {
     }
 }
 
-pub(crate) fn get_file_project_manager(
+pub(crate) async fn get_file_project_manager(
     path: PathBuf,
 ) -> Result<Arc<Box<dyn ProjectManager>>, MarsError> {
-    let mut file = fs::File::open(path)
+    if path.starts_with("http://") ||  path.starts_with("https://") {
+        let https = HttpsConnector::new();
+        let client = Client::builder().build::<_, hyper::Body>(https);
+        let request = Request::builder()
+            .uri("https://httpbin.org/basic-auth/prasanth/prasanth")
+            .body(hyper::Body::empty())
+            .unwrap();
+        let res = client.request(request)
+            .await
+            .map_err(|error| MarsError::ServiceConfigError(format!("ran into error {}", error)))?;
+        let body = hyper::body::to_bytes(res.into_body()).await.map_err(|error|MarsError::ServiceConfigError(format!("unable to download config, {error}")))?;
+        let body_str = String::from_utf8(body.to_vec()).map_err(|error|MarsError::ServiceConfigError(format!("unable to download, {error}")))?;
+        let value: Value = json5::from_str(&body_str)
         .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
-    let mut config = String::new();
-    file.read_to_string(&mut config)
-        .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
-    let value: Value = json5::from_str(&config)
-        .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
-    Ok(Arc::new(Box::new(FileProjectManager::try_from(value)?)))
+        Ok(Arc::new(Box::new(FileProjectManager::try_from(value)?)))
+    } else {
+        let mut file = fs::File::open(path)
+            .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
+        let mut config = String::new();
+        file.read_to_string(&mut config)
+            .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
+        let value: Value = json5::from_str(&config)
+            .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
+        Ok(Arc::new(Box::new(FileProjectManager::try_from(value)?)))
+    }
 }

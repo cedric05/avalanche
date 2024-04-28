@@ -172,12 +172,12 @@ async fn main() {
                                 index: sea_orm::ActiveValue::Set(service_index.clone()),
                                 url: sea_orm::ActiveValue::Set(service_config.url),
                             };
-                            if let Err(_) = mars_entity::subproject::Entity::insert(pear)
+                            if let Err(err) = mars_entity::subproject::Entity::insert(pear)
                                 .exec(&db)
                                 .await
                             {
                                 println!(
-                                    "unable to insert sub project {service_index} for project {index}"
+                                    "unable to insert sub project {service_index} for project {index}, error {err}"
                                 );
                             }
                         }

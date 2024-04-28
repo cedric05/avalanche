@@ -10,15 +10,10 @@ pub struct Model {
     pub id: i32,
     pub project_id: i32,
     pub method: Method,
-    #[sea_orm(column_type = "Text")]
     pub query_params: QueryParams,
-    #[sea_orm(column_type = "Text")]
     pub headers: Headers,
-    #[sea_orm(column_type = "Text")]
     pub auth: Auth,
-    #[sea_orm(column_type = "Text")]
     pub params: GeneralParams,
-    #[sea_orm(column_type = "Text")]
     pub index: String,
     pub url: String,
 }
@@ -38,7 +33,7 @@ mod test {
     #[tokio::test]
     async fn haha() {
         let db = Database::connect(
-            "sqlite:///home/neptune/projects/personal/cedric05/mars-rover/db.sqlite",
+            "postgres://postgres:postgres@db:5432/postgres",
         )
         .await
         .unwrap();
@@ -81,7 +76,9 @@ mod test {
         };
         let res = Entity::insert(pear).exec(&db).await.unwrap();
 
-        println!();
+        let result = Entity::find().filter(Column::Id.eq(res.last_insert_id)).one(&db).await.unwrap();
+
+        println!("Result: {:?}", result);
         println!("Inserted: last_insert_id = {}\n", res.last_insert_id);
     }
 }

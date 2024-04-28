@@ -44,14 +44,14 @@ impl AuthProjectRequestHandler for DbProject {
                 .one(&self.db_con)
                 .await?
             {
-                Some(project) => {
+                Some(subproject) => {
                     let config = ServiceConfig {
-                        url: project.url,
-                        method: project.method.0,
-                        query_params: project.query_params.0,
-                        headers: project.headers.0,
-                        auth: project.auth.0,
-                        params: project.params.0,
+                        url: subproject.url,
+                        method: subproject.method.0,
+                        query_params: subproject.query_params.0,
+                        headers: subproject.headers.0,
+                        auth: subproject.auth.0,
+                        params: subproject.params.0,
                     };
                     println!("config is {:?}", config);
                     match get_auth_service(config) {
@@ -65,10 +65,11 @@ impl AuthProjectRequestHandler for DbProject {
                         )))),
                     }
                 }
-                None => Err(Box::new(MarsError::ServiceConfigError(format!(
+                None =>{
+                    Err(Box::new(MarsError::ServiceConfigError(format!(
                     "for project `{}` service: `{}` is not configured",
                     self.project_id, path,
-                )))),
+                ))))},
             }
         }
     }

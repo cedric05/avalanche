@@ -1,0 +1,6 @@
+{
+    "azureFunctions.deploySubpath": "mars-azure-functions",
+    "azureFunctions.projectLanguage": "Custom",
+    "azureFunctions.projectRuntime": "~4",
+    "debug.internalConsoleOptions": "neverOpen"
+}
