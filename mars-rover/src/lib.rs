@@ -18,36 +18,23 @@
 //! # Examples
 //!
 //!
-mod cli;
 #[cfg(feature = "sql")]
-mod db;
-mod json_project_manager;
-mod project;
-mod user;
+pub mod db;
+pub mod file;
+pub mod project;
 
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use clap::Parser;
+use auth::response_from_status_message;
+use http::{header::HeaderName, HeaderValue, Request, Response};
 use hyper::service::{make_service_fn, service_fn};
+use hyper::Body;
 use hyper::Server;
 use mars_config::{AvalancheTrace, AVALANCHE_TRACE};
-use user::{
-    AuthToken,
-    AuthTokenStore,
-    InMemoryAuthTokenStore,
-    SimpleUserTokenStore,
-    //UserStore,
-    UserTokenStore,
-};
-
-use http::{header::HeaderName, HeaderValue, Request, Response};
-use hyper::Body;
 use project::ProjectManager;
-use std::env;
-use std::net::Ipv4Addr;
 
 pub use mars_request_transform as auth;
 
@@ -75,13 +62,10 @@ pub use mars_request_transform as auth;
 async fn hyper_service_fn(
     mut request: Request<Body>,
     project_handler: Arc<Box<dyn ProjectManager>>,
-    //    user_store: Box<Arc<UserStore>>,
-    user_token_store: Box<Arc<dyn UserTokenStore>>,
-    auth_token_store: Box<Arc<dyn AuthTokenStore>>,
 ) -> Result<Response<Body>, Infallible> {
-    // TODO, modifying header may not be accpetable for some
-    // use uuid or some random generated
+    // using uuid as trace
     let trace = uuid::Uuid::new_v4().to_string();
+    // TODO, modifying header may not be accpetable for some
     request.headers_mut().insert(
         HeaderName::from_str(AVALANCHE_TRACE).expect("impossible to fail"),
         HeaderValue::from_str(&trace).expect("impossible to fail"),
@@ -89,89 +73,42 @@ async fn hyper_service_fn(
     request
         .extensions_mut()
         .insert(AvalancheTrace(trace.clone()));
-    let handle_request = project_handler.handle_request(
-        request,
-        // user_store,
-        user_token_store,
-        auth_token_store,
-    );
 
-    let response = match handle_request.await {
-        Ok(result) => result,
+    match project_handler.handle_request(request).await {
+        Ok(result) => {
+            log::info!(
+                "[{}] request completed with status {:?}",
+                trace,
+                result.status()
+            );
+            Ok(result)
+        }
         Err(error) => {
             log::error!("[{}] request ran into error= {:?}", trace, error);
-            Response::builder()
-                .status(500)
-                .body(Body::from(format!("error: {}", error)))
-                .unwrap()
+            Ok(response_from_status_message(500, format!("error: {}", error)).unwrap())
         }
-    };
-    log::info!(
-        "[{}] request completed with status {:?}",
-        trace,
-        response.status()
-    );
-    Ok(response)
+    }
 }
 
-pub async fn start_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // TODO setup simple console output logger
-    // For every connection, we must make a `Service` to handle all
-    // incoming HTTP requests on said connection.
-    simple_logger::SimpleLogger::new()
-        .with_colors(true)
-        .with_level(log::LevelFilter::Info)
-        .init()?;
+pub async fn start_server(addr: SocketAddr, project_handler:  Arc<Box<dyn ProjectManager>>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
-    let args = cli::Args::parse();
-    let project_handler = args.get_project_manager().await;
-
-    // let user_store: Box<Arc<UserStore>> = Box::new(Arc::new(UserStore::default()));
-    let user_token_store: Box<Arc<dyn UserTokenStore>> =
-        Box::new(Arc::new(SimpleUserTokenStore::default()));
-    let auth_token_store = InMemoryAuthTokenStore::default();
-    auth_token_store.insert(AuthToken("hai".to_string()), "first".to_string());
-    let auth_token_store: Box<Arc<dyn AuthTokenStore>> = Box::new(Arc::new(auth_token_store));
 
     let make_svc = make_service_fn(|_conn| {
         // This is the `Service` that will handle the connection.
         // `service_fn` is a helper to convert a function that
         // returns a Response into a `Service`.
         let project_handler = project_handler.clone();
-        // let user_store = user_store.clone();
-        let user_token_store = user_token_store.clone();
-        let auth_token_store = auth_token_store.clone();
-
         async move {
             Ok::<_, Infallible>(service_fn(move |req| {
                 //
                 let project_handler = Arc::clone(&project_handler);
-                // let user_store = user_store.clone();
-                let user_token_store: Box<Arc<dyn UserTokenStore>> = user_token_store.clone();
-                let auth_token_store: Box<Arc<dyn AuthTokenStore>> = auth_token_store.clone();
                 async move {
                     //
-                    hyper_service_fn(
-                        req,
-                        project_handler,
-                        //user_store,
-                        user_token_store,
-                        auth_token_store,
-                    )
-                    .await
+                    hyper_service_fn(req, project_handler).await
                 }
             }))
         }
     });
-
-    let port_key = "FUNCTIONS_CUSTOMHANDLER_PORT";
-    let addr = match env::var(port_key) {
-        Ok(val) => {
-            let port = val.parse().expect("Custom Handler port is not a number!");
-            SocketAddr::from((Ipv4Addr::LOCALHOST, port))
-        }
-        Err(_) => SocketAddr::from_str(&args.addr).expect("Unable to parse address from cli"),
-    };
 
     let server = Server::bind(&addr).serve(make_svc);
 

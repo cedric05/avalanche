@@ -1,7 +1,7 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
-pub use super::query::*;
+pub use super::http_params::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Deserialize, Serialize)]
 #[sea_orm(table_name = "subproject")]

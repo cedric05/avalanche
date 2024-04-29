@@ -8,14 +8,15 @@ use http::Response;
 use hyper::Body;
 use mars_config::{MarsError, AVALANCHE_TOKEN};
 
-use crate::user::{
-    AuthToken,
-    AuthTokenStore,
-    //UserStore,
-    UserTokenStore,
-};
 use hyper::service::Service;
 use mars_request_transform::{response_from_status_message, ProxyService, ProxyUrlPath};
+
+/// `AuthToken` represents an authentication token.
+///
+/// It is used for authentication purposes.
+#[derive(Hash, PartialEq, Eq, Debug, Clone)]
+pub struct AuthToken(pub String);
+
 
 /// `AuthProjectRequestHandler` is responsible for handling authentication requests for a project.
 ///
@@ -35,7 +36,7 @@ use mars_request_transform::{response_from_status_message, ProxyService, ProxyUr
 /// This handler will return an error if the request cannot be processed, for example due to invalid
 /// tokens or network issues.
 #[async_trait]
-pub(crate) trait AuthProjectRequestHandler: Sync + Send + DynClone {
+pub trait AuthProjectRequestHandler: Sync + Send + DynClone {
     async fn is_project(&self, path: &str) -> bool;
 
     async fn get_service(
@@ -67,12 +68,10 @@ clone_trait_object!(AuthProjectRequestHandler);
 /// for example due to database issues.
 
 #[async_trait]
-pub(crate) trait ProjectManager: Sync + Send {
+pub trait ProjectManager: Sync + Send {
     async fn handle_request(
         &self,
         mut request: hyper::Request<Body>,
-        user_token_store: Box<Arc<dyn UserTokenStore>>,
-        auth_token_store: Box<Arc<dyn AuthTokenStore>>,
     ) -> Result<Response<Body>, Box<dyn Error>> {
         log::info!("recieved a request {:?}", request.uri());
         let uri = request.uri().clone();
@@ -101,9 +100,7 @@ pub(crate) trait ProjectManager: Sync + Send {
                     };
                     let avalanche_token =
                         AuthToken(String::from_utf8(avalanche_token.as_bytes().to_vec())?);
-                    if !(user_token_store.exists(&avalanche_token)
-                        || auth_token_store.exists(&avalanche_token, project_key))
-                    {
+                    if !(self.exists(&avalanche_token, project_key).await) {
                         return response_from_status_message(
                             401,
                             "avalanche token not valid".into(),
@@ -155,4 +152,6 @@ pub(crate) trait ProjectManager: Sync + Send {
         &self,
         project_key: String,
     ) -> Result<Option<Arc<Box<dyn AuthProjectRequestHandler>>>, Box<dyn Error>>;
+
+    async fn exists(&self, token: &AuthToken, project: &str) -> bool;
 }

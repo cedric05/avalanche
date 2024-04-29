@@ -17,7 +17,15 @@ pub fn response_from_status_message(
     status: u16,
     message: String,
 ) -> Result<Response<Body>, Box<dyn Error>> {
+    let error = status >= 400;
+    let response_body = serde_json::json!({
+        "message": message,
+        "error": error,
+    })
+    .to_string();
     Ok(Response::builder()
         .status(status)
-        .body(Body::from(message))?)
+        .header("content-type", "application/json")
+        .header("from-avalanche", "true")
+        .body(Body::from(response_body))?)
 }

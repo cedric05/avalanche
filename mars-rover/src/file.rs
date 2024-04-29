@@ -1,4 +1,5 @@
 use crate::auth::{get_auth_service, ProxyService};
+use crate::project::AuthToken;
 
 use async_trait::async_trait;
 use dashmap::{mapref::one::RefMut, DashMap};
@@ -67,8 +68,15 @@ impl AuthProjectRequestHandler for FileBasedProject {
 /// `AuthProjectRequestHandler` trait. The `try_from` method is used to create an instance of `FileProjectManager`
 /// from a JSON configuration.
 #[derive(Clone)]
-pub(crate) struct FileProjectManager {
+pub struct FileProjectManager {
     projects: DashMap<String, Arc<Box<dyn AuthProjectRequestHandler>>>,
+    pub(crate) project_tokens: DashMap<AuthToken, String>,
+}
+
+impl FileProjectManager {
+    // pub fn insert(&self, auth_token: AuthToken, project_key: String) {
+    //     self.project_tokens.insert(auth_token, project_key);
+    // }
 }
 
 // unsafe impl Send for SimpleProjectHandler {}
@@ -83,6 +91,15 @@ impl ProjectManager for FileProjectManager {
             MarsError::ServiceConfigError(format!("project `{project_key}` is missing"))
         })?;
         Ok(Some(project.clone()))
+    }
+
+    async fn exists(&self, auth_token: &AuthToken, project_index: &str) -> bool {
+        let allowed_project = self.project_tokens.get(&auth_token);
+        if let Some(allowed_project) = allowed_project {
+            *allowed_project == project_index
+        } else {
+            false
+        }
     }
 }
 
@@ -137,50 +154,68 @@ impl TryFrom<Value> for FileProjectManager {
         let all_config = value
             .as_object_mut()
             .ok_or_else(|| MarsError::ServiceConfigError("config is not object".to_string()))?;
-        let map = DashMap::new();
+        let projects = DashMap::new();
         for (project_key, project_config) in all_config {
             let project_config = project_config.take();
             let project = FileBasedProject::try_from(project_config)?;
             let project: Box<dyn AuthProjectRequestHandler> = Box::new(project);
-            map.insert(project_key.to_string(), Arc::new(project));
+            projects.insert(project_key.to_string(), Arc::new(project));
         }
-        Ok(FileProjectManager { projects: map })
+        Ok(FileProjectManager {
+            projects,
+            project_tokens: Default::default(),
+        })
     }
 }
 
-pub(crate) async fn get_file_project_manager(
+pub async fn get_file_project_manager(
     path: PathBuf,
+    tokens: Option<String>
 ) -> Result<Arc<Box<dyn ProjectManager>>, MarsError> {
-    if path.starts_with("http://") || path.starts_with("https://") {
-        let https = HttpsConnector::new();
-        let client = Client::builder().build::<_, hyper::Body>(https);
-        let request = Request::builder()
-            .uri("https://httpbin.org/basic-auth/prasanth/prasanth")
-            .body(hyper::Body::empty())
-            .unwrap();
-        let res = client
-            .request(request)
-            .await
-            .map_err(|error| MarsError::ServiceConfigError(format!("ran into error {}", error)))?;
-        let body = hyper::body::to_bytes(res.into_body())
-            .await
-            .map_err(|error| {
-                MarsError::ServiceConfigError(format!("unable to download config, {error}"))
-            })?;
-        let body_str = String::from_utf8(body.to_vec()).map_err(|error| {
+    let value: Value = json5::from_str(&get_as_string_from_link(path).await?)
+        .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
+    let tokens: HashMap<String, String> = match tokens{
+        Some(path) => json5::from_str(&get_as_string_from_link(path.into()).await?)
+                .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?,
+        None => HashMap::new(),
+    };
+    let mut project_manager = FileProjectManager::try_from(value)?;
+    project_manager.project_tokens.extend(tokens.into_iter().map(|(key, value)|( AuthToken(key), value)));
+    Ok(Arc::new(Box::new(project_manager)))
+}
+
+async fn get_as_string_from_link(path: PathBuf) -> Result<String, MarsError> {
+    let body_str = if path.starts_with("http://") || path.starts_with("https://") {
+        let body = get_data_from_remote().await?;
+        String::from_utf8(body.to_vec()).map_err(|error| {
             MarsError::ServiceConfigError(format!("unable to download, {error}"))
-        })?;
-        let value: Value = json5::from_str(&body_str)
-            .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
-        Ok(Arc::new(Box::new(FileProjectManager::try_from(value)?)))
+        })?
     } else {
         let mut file = fs::File::open(path)
             .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
-        let mut config = String::new();
-        file.read_to_string(&mut config)
+        let mut body_str = String::new();
+        file.read_to_string(&mut body_str)
             .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
-        let value: Value = json5::from_str(&config)
-            .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
-        Ok(Arc::new(Box::new(FileProjectManager::try_from(value)?)))
-    }
+        body_str
+    };
+    Ok(body_str)
+}
+
+async fn get_data_from_remote() -> Result<hyper::body::Bytes, MarsError> {
+    let https = HttpsConnector::new();
+    let client = Client::builder().build::<_, hyper::Body>(https);
+    let request = Request::builder()
+        .uri("https://httpbin.org/basic-auth/prasanth/prasanth")
+        .body(hyper::Body::empty())
+        .unwrap();
+    let res = client
+        .request(request)
+        .await
+        .map_err(|error| MarsError::ServiceConfigError(format!("ran into error {}", error)))?;
+    let body = hyper::body::to_bytes(res.into_body())
+        .await
+        .map_err(|error| {
+            MarsError::ServiceConfigError(format!("unable to download config, {error}"))
+        })?;
+    Ok(body)
 }

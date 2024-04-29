@@ -1,11 +1,15 @@
 /// This module contains the implementation of the database-related functionality for the Mars Rover application.
 /// It includes structs for managing projects and services, as well as functions for retrieving project managers and database connections.
-use crate::auth::{get_auth_service, ProxyService};
+use crate::{
+    auth::{get_auth_service, ProxyService},
+    project::AuthToken,
+};
 use dashmap::{mapref::one::RefMut, DashMap};
+use mars_entity::user;
 use sea_orm::{ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter};
 
-use std::error::Error;
 use std::sync::Arc;
+use std::{error::Error, str::FromStr};
 
 use crate::project::{AuthProjectRequestHandler, ProjectManager};
 use mars_config::{MarsError, ServiceConfig};
@@ -117,10 +121,76 @@ impl ProjectManager for DbProjectManager {
             }
         }
     }
+
+    async fn exists(&self, token: &AuthToken, project_index: &str) -> bool {
+        use mars_entity::authtoken;
+        use mars_entity::project;
+        use mars_entity::user_project;
+
+        let (token_type, auth_token) = match token.0.split_once(":") {
+            Some((token_type, auth_token)) => (token_type, auth_token),
+            None => return false,
+        };
+        let auth_token = match uuid::Uuid::from_str(auth_token) {
+            Ok(uuid) => uuid,
+            _ => return false,
+        };
+        match token_type {
+            "user" => {
+                // SELECT "user_projects"."id", "user_projects"."user_id", "user_projects"."project_id", "user_projects"."permissions" FROM "user_projects" INNER JOIN "project" ON "user_projects"."project_id" = "project"."id" INNER JOIN "users" ON "user_projects"."user_id" = "users"."id" INNER JOIN "authtoken" ON "authtoken"."user_id" = "user_projects"."id" WHERE "project"."index" = 'aviko' AND "authtoken"."auth_token" = '751d5169-204b-4c0f-9cbe-02abc6f5deb8';
+                match user_project::Entity::find()
+                    .filter(project::Column::Index.eq(project_index))
+                    .inner_join(project::Entity)
+                    .inner_join(user::Entity)
+                    .inner_join(authtoken::Entity)
+                    .filter(authtoken::Column::AuthToken.eq(auth_token))
+                    .one(&self.db_conn)
+                    .await
+                {
+                    Ok(Some(user_project_obj)) => {
+                        println!("user_project_obj is {:?}", user_project_obj);
+                        let execute = mars_entity::authtoken::AuthTokenPermissions::Execute as u8;
+                        (user_project_obj.permissions as u8 & execute) == execute
+                    }
+                    Ok(None) => {
+                        log::error!("no authtoken present in db");
+                        false
+                    }
+                    Err(err) => {
+                        log::error!("unable get data {}", err);
+                        false
+                    }
+                }
+            }
+            "project" => {
+                match authtoken::Entity::find()
+                    .filter(authtoken::Column::AuthToken.eq(auth_token))
+                    .inner_join(project::Entity)
+                    .filter(project::Column::Index.eq(project_index))
+                    .one(&self.db_conn)
+                    .await
+                {
+                    Ok(Some(auth_token_obj)) => {
+                        let execute = mars_entity::authtoken::AuthTokenPermissions::Execute as u8;
+                        (auth_token_obj.permissions as u8 & execute) == execute
+                    }
+                    Ok(None) => {
+                        log::error!("no authtoken present in db");
+                        false
+                    }
+                    Err(err) => {
+                        log::error!("unable get data {}", err);
+                        false
+                    }
+                }
+            }
+            _ => false,
+        }
+    }
 }
 
 /// Retrieves a project manager for the database connection.
-pub(crate) async fn get_db_project_manager(
+pub async fn get_db_project_manager(
     url: &str,
 ) -> Result<Arc<Box<dyn ProjectManager>>, Box<dyn Error>> {
     let db = Database::connect(url).await?;
