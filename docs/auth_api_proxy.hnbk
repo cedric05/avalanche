@@ -4,7 +4,7 @@
 
     @name(base)
     GET 'http://localhost:3000/aviko'
-    // "avalanche-token" : "hai"
+    "avalanche-token" : "e3107459-9056-4e56-82db-a26acb7249fb"
   outputs: []
 - kind: 2
   language: dothttp-vscode

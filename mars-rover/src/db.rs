@@ -1,11 +1,14 @@
 /// This module contains the implementation of the database-related functionality for the Mars Rover application.
 /// It includes structs for managing projects and services, as well as functions for retrieving project managers and database connections.
-use crate::auth::{get_auth_service, ProxyService};
+use crate::{
+    auth::{get_auth_service, ProxyService},
+    user::AuthToken,
+};
 use dashmap::{mapref::one::RefMut, DashMap};
 use sea_orm::{ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter};
 
-use std::error::Error;
 use std::sync::Arc;
+use std::{error::Error, str::FromStr};
 
 use crate::project::{AuthProjectRequestHandler, ProjectManager};
 use mars_config::{MarsError, ServiceConfig};
@@ -116,6 +119,33 @@ impl ProjectManager for DbProjectManager {
                 }
             }
         }
+    }
+
+    async fn exists(&self, token: &AuthToken, project_index: &str) -> bool {
+        use mars_entity::authtoken;
+        use mars_entity::project;
+
+        let from_str = match uuid::Uuid::from_str(token.0.as_str()) {
+            Ok(uuid) => uuid,
+            _ => return false,
+        };
+        let auth_token_obj = match authtoken::Entity::find()
+            .filter(authtoken::Column::AuthToken.eq(from_str))
+            .inner_join(project::Entity)
+            .filter(project::Column::Index.eq(project_index))
+            .one(&self.db_conn)
+            .await
+        {
+            Ok(Some(auth_token_obj)) => auth_token_obj,
+            Ok(None) => return false,
+            Err(err) => {
+                log::error!("unable get data {}", err);
+                return false;
+            }
+        };
+
+        let execute = mars_entity::authtoken::AuthTokenPermissions::Execute as u8;
+        (auth_token_obj.permissions as u8 & execute) == execute
     }
 }
 

@@ -34,15 +34,6 @@ use clap::Parser;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::Server;
 use mars_config::{AvalancheTrace, AVALANCHE_TRACE};
-use user::{
-    AuthToken,
-    AuthTokenStore,
-    InMemoryAuthTokenStore,
-    SimpleUserTokenStore,
-    //UserStore,
-    UserTokenStore,
-};
-
 use http::{header::HeaderName, HeaderValue, Request, Response};
 use hyper::Body;
 use project::ProjectManager;
@@ -75,9 +66,6 @@ pub use mars_request_transform as auth;
 async fn hyper_service_fn(
     mut request: Request<Body>,
     project_handler: Arc<Box<dyn ProjectManager>>,
-    //    user_store: Box<Arc<UserStore>>,
-    user_token_store: Box<Arc<dyn UserTokenStore>>,
-    auth_token_store: Box<Arc<dyn AuthTokenStore>>,
 ) -> Result<Response<Body>, Infallible> {
     // TODO, modifying header may not be accpetable for some
     // use uuid or some random generated
@@ -91,9 +79,6 @@ async fn hyper_service_fn(
         .insert(AvalancheTrace(trace.clone()));
     let handle_request = project_handler.handle_request(
         request,
-        // user_store,
-        user_token_store,
-        auth_token_store,
     );
 
     let response = match handle_request.await {
@@ -126,37 +111,20 @@ pub async fn start_server() -> Result<(), Box<dyn std::error::Error + Send + Syn
     let args = cli::Args::parse();
     let project_handler = args.get_project_manager().await;
 
-    // let user_store: Box<Arc<UserStore>> = Box::new(Arc::new(UserStore::default()));
-    let user_token_store: Box<Arc<dyn UserTokenStore>> =
-        Box::new(Arc::new(SimpleUserTokenStore::default()));
-    let auth_token_store = InMemoryAuthTokenStore::default();
-    auth_token_store.insert(AuthToken("hai".to_string()), "first".to_string());
-    let auth_token_store: Box<Arc<dyn AuthTokenStore>> = Box::new(Arc::new(auth_token_store));
-
     let make_svc = make_service_fn(|_conn| {
         // This is the `Service` that will handle the connection.
         // `service_fn` is a helper to convert a function that
         // returns a Response into a `Service`.
         let project_handler = project_handler.clone();
-        // let user_store = user_store.clone();
-        let user_token_store = user_token_store.clone();
-        let auth_token_store = auth_token_store.clone();
-
         async move {
             Ok::<_, Infallible>(service_fn(move |req| {
                 //
                 let project_handler = Arc::clone(&project_handler);
-                // let user_store = user_store.clone();
-                let user_token_store: Box<Arc<dyn UserTokenStore>> = user_token_store.clone();
-                let auth_token_store: Box<Arc<dyn AuthTokenStore>> = auth_token_store.clone();
                 async move {
                     //
                     hyper_service_fn(
                         req,
                         project_handler,
-                        //user_store,
-                        user_token_store,
-                        auth_token_store,
                     )
                     .await
                 }

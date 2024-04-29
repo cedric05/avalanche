@@ -1,4 +1,5 @@
 use crate::auth::{get_auth_service, ProxyService};
+use crate::user::AuthToken;
 
 use async_trait::async_trait;
 use dashmap::{mapref::one::RefMut, DashMap};
@@ -69,6 +70,13 @@ impl AuthProjectRequestHandler for FileBasedProject {
 #[derive(Clone)]
 pub(crate) struct FileProjectManager {
     projects: DashMap<String, Arc<Box<dyn AuthProjectRequestHandler>>>,
+    pub(crate) project_tokens: DashMap<AuthToken, String>,
+}
+
+impl FileProjectManager {
+    // pub fn insert(&self, auth_token: AuthToken, project_key: String) {
+    //     self.project_tokens.insert(auth_token, project_key);
+    // }
 }
 
 // unsafe impl Send for SimpleProjectHandler {}
@@ -83,6 +91,15 @@ impl ProjectManager for FileProjectManager {
             MarsError::ServiceConfigError(format!("project `{project_key}` is missing"))
         })?;
         Ok(Some(project.clone()))
+    }
+
+    async fn exists(&self, auth_token: &AuthToken, project_index: &str) -> bool {
+        let allowed_project = self.project_tokens.get(&auth_token);
+        if let Some(allowed_project) = allowed_project {
+            *allowed_project == project_index
+        } else {
+            false
+        }
     }
 }
 
@@ -137,14 +154,42 @@ impl TryFrom<Value> for FileProjectManager {
         let all_config = value
             .as_object_mut()
             .ok_or_else(|| MarsError::ServiceConfigError("config is not object".to_string()))?;
-        let map = DashMap::new();
-        for (project_key, project_config) in all_config {
+        
+        
+        let mut temp_tokens = all_config
+                .get_mut("tokens")
+                .ok_or_else(||MarsError::ServiceConfigError("no tokens defined".to_owned()))?
+                .take();
+        let all_tokens = temp_tokens.as_object_mut()
+                .ok_or_else(|| MarsError::ServiceConfigError("tokens is not array".to_string()))?;
+
+        let project_tokens: DashMap<AuthToken, String> = DashMap::new();
+
+        for (token, project_index) in all_tokens{
+            let key = project_index.as_str().ok_or_else(||MarsError::ServiceConfigError("tokens uanebl to read as string".to_string()))?;
+            project_tokens.insert(AuthToken(token.to_owned()), key.to_owned());
+        }
+        
+        
+        let mut temp_project_config = all_config
+                .get_mut("projects")
+                .ok_or_else(||MarsError::ServiceConfigError("no projects defined".to_owned()))?
+                .take();
+        let all_project_config = temp_project_config
+                .as_object_mut()
+                .ok_or_else(|| MarsError::ServiceConfigError("config is not object".to_string()))?;
+
+        let projects = DashMap::new();
+        for (project_key, project_config) in all_project_config {
             let project_config = project_config.take();
             let project = FileBasedProject::try_from(project_config)?;
             let project: Box<dyn AuthProjectRequestHandler> = Box::new(project);
-            map.insert(project_key.to_string(), Arc::new(project));
+            projects.insert(project_key.to_string(), Arc::new(project));
         }
-        Ok(FileProjectManager { projects: map })
+        Ok(FileProjectManager {
+            projects,
+            project_tokens,
+        })
     }
 }
 

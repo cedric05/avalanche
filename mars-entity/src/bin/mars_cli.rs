@@ -1,10 +1,12 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use clap::{Parser, Subcommand};
 use mars_config::ServiceConfig;
 use mars_entity::project::ActiveModel;
 use mars_entity::project::Entity as ProjectEntity;
 use mars_entity::subproject::Entity as SubProjectEntity;
+use sea_orm::prelude::Uuid;
 use sea_orm::{
     sea_query::TableCreateStatement, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, Schema,
 };
@@ -28,6 +30,14 @@ enum SubCommand {
     Dump,
     Orm,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+struct TotalConfig{
+    tokens: TokenConfig,
+    projects: MultipleProjects
+}
+#[derive(Serialize, Deserialize, Debug)]
+struct TokenConfig(HashMap<String, String>);
 
 #[derive(Serialize, Deserialize, Debug)]
 struct MultipleProjects(HashMap<String, ProjectDTO>);
@@ -107,10 +117,9 @@ async fn main() {
         SubCommand::Load => {
             let config = std::fs::read_to_string(args.file).expect("unable to open file");
             println!("able to read file");
-            let config: MultipleProjects = json5::from_str(&config).expect("unable to parse");
+            let config: TotalConfig = json5::from_str(&config).expect("unable to parse");
             let mut failed = MultipleProjects(Default::default());
-
-            for (index, project) in config.0.into_iter() {
+            for (index, project) in config.projects.0.into_iter() {
                 let mut failed_project = ProjectDTO {
                     subprojects: Default::default(),
                     needs_auth: project.needs_auth,
@@ -204,6 +213,37 @@ async fn main() {
                     done"
                 );
             }
+
+            
+            for (auth_token, project_index) in config.tokens.0.into_iter(){
+                let auth_token = Uuid::from_str(auth_token.as_str()).expect("unable to decode auth_token");
+
+                let project = match mars_entity::project::Entity::find()
+                    .filter(mars_entity::project::Column::Index.eq(project_index.clone()))
+                    .one(&db)
+                    .await
+                    .expect("unable to make query")
+                    {
+                        Some(project_id) => project_id,
+                        None => {
+                            println!("unabe to insert auth_token_config");
+                            continue;
+                        },
+                    };
+
+                let auth_token_model = mars_entity::authtoken::ActiveModel {
+                    id: sea_orm::ActiveValue::NotSet,
+                    user_id: sea_orm::ActiveValue::NotSet,
+                    auth_token: sea_orm::ActiveValue::Set(auth_token),
+                    project_id: sea_orm::ActiveValue::Set(Some(project.id)),
+                    permissions: sea_orm::ActiveValue::Set(mars_entity::authtoken::AuthTokenPermissions::Execute as i32)
+                };
+                let res = mars_entity::authtoken::Entity::insert(auth_token_model)
+                .exec(&db)
+                .await
+                .expect("unable to insert auth_token");
+            }
+
         }
         SubCommand::Orm => {
             let builder = db.get_database_backend();
@@ -217,6 +257,21 @@ async fn main() {
             let stmt: TableCreateStatement = schema.create_table_from_entity(SubProjectEntity);
             let result = db.execute(db.get_database_backend().build(&stmt)).await;
             println!("created subproject {:?}", result);
-        }
+
+            let stmt: TableCreateStatement =
+                schema.create_table_from_entity(mars_entity::user::Entity);
+            let result = db.execute(db.get_database_backend().build(&stmt)).await;
+            println!("created user {:?}", result);
+
+            let stmt: TableCreateStatement =
+                schema.create_table_from_entity(mars_entity::user_project::Entity);
+            let result = db.execute(db.get_database_backend().build(&stmt)).await;
+            println!("created user_project {:?}", result);
+
+            let stmt: TableCreateStatement =
+                schema.create_table_from_entity(mars_entity::authtoken::Entity);
+            let result = db.execute(db.get_database_backend().build(&stmt)).await;
+            println!("created auth_tokens {:?}", result);
+        },
     }
 }
