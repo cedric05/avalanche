@@ -8,7 +8,8 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"shivaprasanth.dothttp-extension-pack"
+				"shivaprasanth.dothttp-extension-pack",
+				"ms-azuretools.vscode-azurefunctions"
 			]
 		}
 	}

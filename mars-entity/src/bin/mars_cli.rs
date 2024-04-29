@@ -1,10 +1,10 @@
 use std::collections::HashMap;
-
 use clap::{Parser, Subcommand};
 use mars_config::ServiceConfig;
 use mars_entity::project::ActiveModel;
 use mars_entity::project::Entity as ProjectEntity;
 use mars_entity::subproject::Entity as SubProjectEntity;
+use sea_orm::prelude::Uuid;
 use sea_orm::{
     sea_query::TableCreateStatement, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, Schema,
 };
@@ -27,7 +27,23 @@ enum SubCommand {
     Load,
     Dump,
     Orm,
+    CreateToken{
+        /// userid
+        #[clap(short, long)]
+        user_id: Option<i32>,
+        /// projectid
+        #[clap(short, long)]
+        project_id: Option<i32>
+    }
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+struct TotalConfig {
+    tokens: TokenConfig,
+    projects: MultipleProjects,
+}
+#[derive(Serialize, Deserialize, Debug)]
+struct TokenConfig(HashMap<String, String>);
 
 #[derive(Serialize, Deserialize, Debug)]
 struct MultipleProjects(HashMap<String, ProjectDTO>);
@@ -49,6 +65,71 @@ async fn main() {
     println!("able to connect to db");
 
     match args.action {
+        SubCommand::CreateToken { user_id, project_id } => {
+            if let Some(project_id) = project_id {
+                let auth_token = Uuid::new_v4();
+                println!("generated auth_token is {}", auth_token);
+                let project = match mars_entity::project::Entity::find()
+                    .filter(mars_entity::project::Column::Id.eq(project_id))
+                    .one(&db)
+                    .await
+                    .expect("unable to make query")
+                {
+                    Some(project) => project,
+                    None => {
+                        println!("unabe to insert auth_token_config");
+                        return;
+                    }
+                };
+
+                let auth_token_model = mars_entity::authtoken::ActiveModel {
+                    id: sea_orm::ActiveValue::NotSet,
+                    user_id: sea_orm::ActiveValue::NotSet,
+                    auth_token: sea_orm::ActiveValue::Set(auth_token),
+                    project_id: sea_orm::ActiveValue::Set(Some(project.id)),
+                    permissions: sea_orm::ActiveValue::Set(
+                        mars_entity::authtoken::AuthTokenPermissions::Execute as i32,
+                    ),
+                };
+                let _res = mars_entity::authtoken::Entity::insert(auth_token_model)
+                    .exec(&db)
+                    .await
+                    .expect("unable to insert auth_token");
+                println!("inserted {:?}", _res);
+            }
+            if let Some(user) = user_id {
+                let auth_token = Uuid::new_v4();
+                println!("generated auth_token is {}", auth_token);
+                let user = match mars_entity::user::Entity::find()
+                    .filter(mars_entity::user::Column::Id.eq(user))
+                    .one(&db)
+                    .await
+                    .expect("unable to make query")
+                {
+                    Some(user) => user,
+                    None => {
+                        println!("unabe to insert auth_token_config");
+                        return;
+                    }
+                };
+
+                let auth_token_model = mars_entity::authtoken::ActiveModel {
+                    id: sea_orm::ActiveValue::NotSet,
+                    user_id: sea_orm::ActiveValue::Set(Some(user.id)),
+                    auth_token: sea_orm::ActiveValue::Set(auth_token),
+                    project_id: sea_orm::ActiveValue::NotSet,
+                    permissions: sea_orm::ActiveValue::Set(
+                        mars_entity::authtoken::AuthTokenPermissions::Execute as i32,
+                    ),
+                };
+                let _res = mars_entity::authtoken::Entity::insert(auth_token_model)
+                    .exec(&db)
+                    .await
+                    .expect("unable to insert auth_token");
+                println!("inserted {:?}", _res);
+            }
+        
+        },
         SubCommand::Dump => {
             let mut living_projects = MultipleProjects(Default::default());
             for project in mars_entity::project::Entity::find()
@@ -107,10 +188,9 @@ async fn main() {
         SubCommand::Load => {
             let config = std::fs::read_to_string(args.file).expect("unable to open file");
             println!("able to read file");
-            let config: MultipleProjects = json5::from_str(&config).expect("unable to parse");
+            let config: TotalConfig = json5::from_str(&config).expect("unable to parse");
             let mut failed = MultipleProjects(Default::default());
-
-            for (index, project) in config.0.into_iter() {
+            for (index, project) in config.projects.0.into_iter() {
                 let mut failed_project = ProjectDTO {
                     subprojects: Default::default(),
                     needs_auth: project.needs_auth,
@@ -217,6 +297,21 @@ async fn main() {
             let stmt: TableCreateStatement = schema.create_table_from_entity(SubProjectEntity);
             let result = db.execute(db.get_database_backend().build(&stmt)).await;
             println!("created subproject {:?}", result);
+
+            let stmt: TableCreateStatement =
+                schema.create_table_from_entity(mars_entity::user::Entity);
+            let result = db.execute(db.get_database_backend().build(&stmt)).await;
+            println!("created user {:?}", result);
+
+            let stmt: TableCreateStatement =
+                schema.create_table_from_entity(mars_entity::user_project::Entity);
+            let result = db.execute(db.get_database_backend().build(&stmt)).await;
+            println!("created user_project {:?}", result);
+
+            let stmt: TableCreateStatement =
+                schema.create_table_from_entity(mars_entity::authtoken::Entity);
+            let result = db.execute(db.get_database_backend().build(&stmt)).await;
+            println!("created auth_tokens {:?}", result);
         }
     }
 }
