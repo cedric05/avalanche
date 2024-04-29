@@ -1,5 +1,5 @@
 /// This module contains the authentication implementations for different authentication methods.
-/// 
+///
 /// The available authentication methods are:
 /// - AWS authentication (`awsauth`)
 /// - Basic authentication (`basicauth`)
@@ -7,11 +7,11 @@
 /// - Hawk authentication (`hawkauth`)
 /// - Header authentication (`headerauth`)
 /// - X509 authentication (`x509`)
-/// 
+///
 /// Additionally, this module also includes the `service` module, which provides configuration related functionality.
-/// 
+///
 /// To use any of the authentication methods, enable the corresponding feature flag in your Cargo.toml file.
-/// 
+///
 /// Example:
 /// ```toml
 /// [dependencies]

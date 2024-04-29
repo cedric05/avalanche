@@ -41,9 +41,6 @@ use hyper::body;
 
 use tower::{Layer, Service};
 
-
-
-
 #[derive(Clone)]
 pub(crate) struct AwsAuth<S> {
     access_key: String,

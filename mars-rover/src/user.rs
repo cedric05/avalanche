@@ -18,8 +18,6 @@ pub(crate) struct UserStore {
     pub(crate) users: DashSet<User>,
 }
 
-
-
 /// `AuthToken` represents an authentication token.
 ///
 /// It is used for authentication purposes.

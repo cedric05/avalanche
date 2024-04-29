@@ -17,7 +17,6 @@ use std::{convert::TryFrom, error::Error};
 use crate::project::{AuthProjectRequestHandler, ProjectManager};
 use mars_config::{MarsError, ServiceConfig};
 
-
 /// `FileBasedProject` represents a project that is configured based on a file.
 ///
 /// It contains a map of service configurations, a flag indicating whether authentication is needed,
@@ -61,8 +60,6 @@ impl AuthProjectRequestHandler for FileBasedProject {
         }
     }
 }
-
-
 
 /// `FileProjectManager` is responsible for managing `FileBasedProject`s.
 ///
@@ -154,20 +151,27 @@ impl TryFrom<Value> for FileProjectManager {
 pub(crate) async fn get_file_project_manager(
     path: PathBuf,
 ) -> Result<Arc<Box<dyn ProjectManager>>, MarsError> {
-    if path.starts_with("http://") ||  path.starts_with("https://") {
+    if path.starts_with("http://") || path.starts_with("https://") {
         let https = HttpsConnector::new();
         let client = Client::builder().build::<_, hyper::Body>(https);
         let request = Request::builder()
             .uri("https://httpbin.org/basic-auth/prasanth/prasanth")
             .body(hyper::Body::empty())
             .unwrap();
-        let res = client.request(request)
+        let res = client
+            .request(request)
             .await
             .map_err(|error| MarsError::ServiceConfigError(format!("ran into error {}", error)))?;
-        let body = hyper::body::to_bytes(res.into_body()).await.map_err(|error|MarsError::ServiceConfigError(format!("unable to download config, {error}")))?;
-        let body_str = String::from_utf8(body.to_vec()).map_err(|error|MarsError::ServiceConfigError(format!("unable to download, {error}")))?;
+        let body = hyper::body::to_bytes(res.into_body())
+            .await
+            .map_err(|error| {
+                MarsError::ServiceConfigError(format!("unable to download config, {error}"))
+            })?;
+        let body_str = String::from_utf8(body.to_vec()).map_err(|error| {
+            MarsError::ServiceConfigError(format!("unable to download, {error}"))
+        })?;
         let value: Value = json5::from_str(&body_str)
-        .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
+            .map_err(|err| MarsError::ServiceConfigError(format!("ran into error {}", err)))?;
         Ok(Arc::new(Box::new(FileProjectManager::try_from(value)?)))
     } else {
         let mut file = fs::File::open(path)

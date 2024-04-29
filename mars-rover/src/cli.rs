@@ -31,11 +31,13 @@ impl Args {
                 Some(db_url) => db::get_db_project_manager(db_url)
                     .await
                     .expect("unable to connect to db"),
-                None => json_project_manager::get_file_project_manager(self.config.clone().into()).await
+                None => json_project_manager::get_file_project_manager(self.config.clone().into())
+                    .await
                     .expect("unable to load config"),
             };
         }
-        json_project_manager::get_file_project_manager(self.config.clone().into()).await
+        json_project_manager::get_file_project_manager(self.config.clone().into())
+            .await
             .expect("unable to load config")
     }
 }

@@ -17,8 +17,6 @@ use crate::user::{
 use hyper::service::Service;
 use mars_request_transform::{response_from_status_message, ProxyService, ProxyUrlPath};
 
-
-
 /// `AuthProjectRequestHandler` is responsible for handling authentication requests for a project.
 ///
 /// It implements the `ProjectRequestHandler` trait, meaning it provides functionality for processing
@@ -50,8 +48,6 @@ pub(crate) trait AuthProjectRequestHandler: Sync + Send + DynClone {
 
 clone_trait_object!(AuthProjectRequestHandler);
 
-
-
 /// `ProjectManager` is responsible for managing projects within the application.
 ///
 /// It provides functionality for creating, updating, deleting, and retrieving projects. Each project
@@ -71,7 +67,7 @@ clone_trait_object!(AuthProjectRequestHandler);
 /// for example due to database issues.
 
 #[async_trait]
-pub(crate) trait ProjectManager: Sync + Send {    
+pub(crate) trait ProjectManager: Sync + Send {
     async fn handle_request(
         &self,
         mut request: hyper::Request<Body>,

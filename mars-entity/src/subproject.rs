@@ -31,12 +31,17 @@ mod test {
     use super::*;
 
     #[tokio::test]
-    async fn haha() {
-        let db = Database::connect(
-            "postgres://postgres:postgres@db:5432/postgres",
-        )
-        .await
-        .unwrap();
+    async fn test_subproject_query_n_insert() {
+        let path = format!(
+            "sqlite://{}/db.sqlite?mode=rwc",
+            std::env::current_dir()
+                .expect("unable to figure out directory")
+                .to_str()
+                .unwrap()
+        );
+        println!("path is {}", path);
+
+        let db = Database::connect(path).await.unwrap();
 
         let builder = db.get_database_backend();
         let schema = Schema::new(builder);
@@ -76,7 +81,11 @@ mod test {
         };
         let res = Entity::insert(pear).exec(&db).await.unwrap();
 
-        let result = Entity::find().filter(Column::Id.eq(res.last_insert_id)).one(&db).await.unwrap();
+        let result = Entity::find()
+            .filter(Column::Id.eq(res.last_insert_id))
+            .one(&db)
+            .await
+            .unwrap();
 
         println!("Result: {:?}", result);
         println!("Inserted: last_insert_id = {}\n", res.last_insert_id);

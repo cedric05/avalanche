@@ -1,7 +1,10 @@
 use std::{error::Error, future::Future, pin::Pin};
 
 use fluvio_jolt::TransformSpec;
-use http::{header::{CONTENT_LENGTH, CONTENT_TYPE}, Request, Response};
+use http::{
+    header::{CONTENT_LENGTH, CONTENT_TYPE},
+    Request, Response,
+};
 use serde_json::Value;
 use tower::{Layer, Service};
 
@@ -105,7 +108,9 @@ async fn get_transformed_response(
         let out = fluvio_jolt::transform(value, &spec);
         let out = serde_json::to_vec(&out)?;
         parts.headers.remove(CONTENT_LENGTH);
-        parts.headers.insert(CONTENT_TYPE, "application/json".try_into()?);
+        parts
+            .headers
+            .insert(CONTENT_TYPE, "application/json".try_into()?);
         Ok(Response::from_parts(parts, hyper::Body::from(out)))
     } else {
         Ok(resp)
@@ -123,7 +128,9 @@ async fn get_transformed_request(
         let out = fluvio_jolt::transform(value, &spec);
         let out = serde_json::to_vec(&out)?;
         parts.headers.remove(CONTENT_LENGTH);
-        parts.headers.insert(CONTENT_TYPE, "application/json".try_into()?);
+        parts
+            .headers
+            .insert(CONTENT_TYPE, "application/json".try_into()?);
         Ok(Request::from_parts(parts, hyper::Body::from(out)))
     } else {
         Ok(request)

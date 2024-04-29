@@ -1,34 +1,34 @@
 /// This module contains the definitions for Mars configuration.
 /// It includes structs and enums for actions, headers, URL parameters,
 /// authentication types, and general parameters.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// use mars_config::*;
-/// 
+///
 /// // Create a new MarsAuth instance with empty parameters and NoAuth authentication type
 /// let auth = MarsAuth::default();
-/// 
+///
 /// // Get a specific parameter value from MarsAuth
 /// let param = auth.get_param("key");
-/// 
+///
 /// // Get all parameters from MarsAuth
 /// let params = auth.get_params();
-/// 
+///
 /// // Get the authentication type from MarsAuth
 /// let auth_type = auth.auth_type();
-/// 
+///
 /// // Create a new GeneralParams instance with empty value
 /// let general_params = GeneralParams::default();
-/// 
+///
 /// // Get a specific value from GeneralParams
 /// let value = general_params.get_value("key");
-/// 
+///
 /// // Create a new AvalancheTrace instance with a string value
 /// let trace = AvalancheTrace("trace".to_string());
 /// ```
-/// 
+///
 /// For more information, refer to the individual struct and enum documentation.
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -39,7 +39,6 @@ pub use config::ServiceConfig;
 pub use error::*;
 
 pub use consts::*;
-
 
 /// `Action` represents an action that can be performed by a user.
 ///
@@ -61,8 +60,6 @@ pub struct Header {
     pub action: Action,
 }
 
-
-
 /// `UrlParam` represents a URL parameter.
 ///
 /// It contains fields for the parameter's name and value.
@@ -72,8 +69,6 @@ pub struct UrlParam {
     pub value: String,
     pub action: Action,
 }
-
-
 
 /// `Method` represents an HTTP method.
 ///
@@ -105,8 +100,6 @@ pub enum Method {
     SEARCH,
     ANY,
 }
-
-
 
 /// `MarsAuth` represents an authentication object for Mars.
 ///
@@ -189,7 +182,6 @@ impl Default for GeneralParams {
         Self(json!({}))
     }
 }
-
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Default, Deserialize)]
 pub struct AvalancheTrace(pub String);

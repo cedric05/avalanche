@@ -1,7 +1,5 @@
 /// This module contains the implementation of the database-related functionality for the Mars Rover application.
 /// It includes structs for managing projects and services, as well as functions for retrieving project managers and database connections.
-
-
 use crate::auth::{get_auth_service, ProxyService};
 use dashmap::{mapref::one::RefMut, DashMap};
 use sea_orm::{ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter};
@@ -65,11 +63,10 @@ impl AuthProjectRequestHandler for DbProject {
                         )))),
                     }
                 }
-                None =>{
-                    Err(Box::new(MarsError::ServiceConfigError(format!(
+                None => Err(Box::new(MarsError::ServiceConfigError(format!(
                     "for project `{}` service: `{}` is not configured",
                     self.project_id, path,
-                ))))},
+                )))),
             }
         }
     }
@@ -137,10 +134,10 @@ pub(crate) async fn get_db_project_manager(
 
 #[cfg(test)]
 mod test {
+    use super::DbProjectManager;
+    use crate::project::ProjectManager;
     use dashmap::DashMap;
     use sea_orm::Database;
-    use crate::project::ProjectManager;
-    use super::DbProjectManager;
 
     #[ignore]
     #[tokio::test]

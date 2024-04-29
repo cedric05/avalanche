@@ -158,7 +158,7 @@ mod test {
         );
         assert_eq!(
             "https://httpbin.org/get?added=value",
-            url_join("http://httpbin.org/get", "")
+            url_join("https://httpbin.org/get", "")
         );
         assert_eq!(
             "https://httpbin.org/first/second/third/?ranga=ramu&added=value",

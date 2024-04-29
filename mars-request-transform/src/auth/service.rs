@@ -30,6 +30,7 @@
 //!
 //! ```rust
 //! use mars_config::ServiceConfig;
+//! use mars_rover::auth::get_auth_service;
 //!
 //! let service_config = ServiceConfig::new();
 //! let auth_service = get_auth_service(service_config);

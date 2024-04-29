@@ -21,12 +21,16 @@ mod test {
     use sea_orm::{sea_query::TableCreateStatement, ConnectionTrait, Database, Schema};
 
     #[tokio::test]
-    async fn haha() {
-        let db = Database::connect(
-            "sqlite:///home/neptune/projects/personal/cedric05/mars-rover/db.sqlite",
-        )
-        .await
-        .unwrap();
+    async fn test_project_query_n_orm() {
+        let path = format!(
+            "sqlite://{}/db.sqlite?mode=rwc",
+            std::env::current_dir()
+                .expect("unable to figure out directory")
+                .to_str()
+                .unwrap()
+        );
+        println!("path is {}", path);
+        let db = Database::connect(path).await.unwrap();
 
         let builder = db.get_database_backend();
         let schema = Schema::new(builder);

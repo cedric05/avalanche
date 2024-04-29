@@ -21,8 +21,8 @@
 mod cli;
 #[cfg(feature = "sql")]
 mod db;
-mod project;
 mod json_project_manager;
+mod project;
 mod user;
 
 use std::convert::Infallible;
@@ -46,11 +46,10 @@ use user::{
 use http::{header::HeaderName, HeaderValue, Request, Response};
 use hyper::Body;
 use project::ProjectManager;
-use std::net::Ipv4Addr;
 use std::env;
+use std::net::Ipv4Addr;
 
 pub use mars_request_transform as auth;
-
 
 /// `hyper_service_fn` is an asynchronous function that processes incoming HTTP requests.
 ///
@@ -87,14 +86,15 @@ async fn hyper_service_fn(
         HeaderName::from_str(AVALANCHE_TRACE).expect("impossible to fail"),
         HeaderValue::from_str(&trace).expect("impossible to fail"),
     );
-    request.extensions_mut().insert(AvalancheTrace(trace.clone()));
+    request
+        .extensions_mut()
+        .insert(AvalancheTrace(trace.clone()));
     let handle_request = project_handler.handle_request(
         request,
         // user_store,
         user_token_store,
         auth_token_store,
     );
-
 
     let response = match handle_request.await {
         Ok(result) => result,
@@ -113,7 +113,6 @@ async fn hyper_service_fn(
     );
     Ok(response)
 }
-
 
 pub async fn start_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // TODO setup simple console output logger
@@ -170,7 +169,7 @@ pub async fn start_server() -> Result<(), Box<dyn std::error::Error + Send + Syn
         Ok(val) => {
             let port = val.parse().expect("Custom Handler port is not a number!");
             SocketAddr::from((Ipv4Addr::LOCALHOST, port))
-        },
+        }
         Err(_) => SocketAddr::from_str(&args.addr).expect("Unable to parse address from cli"),
     };
 

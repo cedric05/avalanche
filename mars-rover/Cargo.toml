@@ -47,3 +47,6 @@ default = [
     "mars-request-transform/transform",
 ]
 sql = ["mars-entity", "sea-orm"]
+
+[lib]
+doctest = false

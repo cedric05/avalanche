@@ -1,6 +1,9 @@
 use std::{error::Error, future::Future, pin::Pin};
 
-use http::{header::{CONTENT_LENGTH, CONTENT_TYPE}, Request, Response};
+use http::{
+    header::{CONTENT_LENGTH, CONTENT_TYPE},
+    Request, Response,
+};
 use serde_json::Value;
 use tower::{Layer, Service};
 
@@ -102,7 +105,9 @@ async fn get_transformed_response(
         let output_json: Value = serde_json::from_slice(&body)?;
         let out = serde_yaml::to_string(&output_json)?;
         parts.headers.remove(CONTENT_LENGTH);
-        parts.headers.insert(CONTENT_TYPE, "application/yaml".try_into()?);
+        parts
+            .headers
+            .insert(CONTENT_TYPE, "application/yaml".try_into()?);
         Ok(Response::from_parts(parts, hyper::Body::from(out)))
     } else {
         Ok(resp)
@@ -119,7 +124,9 @@ async fn get_transformed_request(
         let output_json: Value = serde_json::from_slice(&body)?;
         let out = serde_json::to_string(&output_json)?;
         parts.headers.remove(CONTENT_LENGTH);
-        parts.headers.insert(CONTENT_TYPE, "application/yaml".try_into()?);
+        parts
+            .headers
+            .insert(CONTENT_TYPE, "application/yaml".try_into()?);
         Ok(Request::from_parts(parts, hyper::Body::from(out)))
     } else {
         Ok(request)

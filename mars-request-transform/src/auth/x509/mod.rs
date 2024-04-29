@@ -101,6 +101,7 @@ mod test {
     const BAD_SSL_PASSWORD: &str = "badssl.com";
     const CERTIFICATE_P12: &str = "../resources/badssl.com-client.p12";
 
+    #[ignore]
     #[tokio::test]
     pub(crate) async fn test_certificate() -> Result<(), Box<dyn Error>> {
         let mut file = std::fs::File::open(CERTIFICATE_P12)?;

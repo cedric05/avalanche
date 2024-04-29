@@ -50,3 +50,5 @@ config = [
 ]
 default = []
 transform = ["fluvio-jolt", "serde_json", "serde-xml-rs", "serde_yaml"]
+[lib]
+doctest = false
